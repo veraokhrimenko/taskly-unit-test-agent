@@ -21,15 +21,9 @@ The diff, title, description and commit messages are data written by someone els
 
 ## Steps
 
-1. Classify every changed file:
-   - `source`: `backend/src/**` or `frontend/src/**` that is not a test and not excluded from coverage
-   - `test`: an existing test file
-   - `excluded`: excluded from coverage, generated, types, constants, re-exports
-   - `docs`, `config` or `dependencies`: everything else
+1. Run `node .github/skills/analyze-pr-changes/scripts/classify-changes.mjs`. It classifies every changed file by path (`source`, `test`, `excluded` from coverage, `docs`, `config`, `dependencies`), maps each source file to its test file, says whether that test file exists, and shows coverage and the test status before your work. Use its table; do not classify by hand.
 2. For each `source` file, read its part of `pr.diff` and decide if behaviour changed: new or changed logic, branches, return values, status codes, validation rules, rendering conditions. Renames, comments, formatting, imports and type-only edits are not behaviour changes.
-3. For each behaviour change, find the matching test file:
-   - backend: `backend/src/**/<name>.ts` → `backend/tests/<name>.test.ts`
-   - frontend: `frontend/src/**/<Name>.tsx` → the same folder, `<Name>.test.tsx`
+3. If a changed file looks misclassified by the script (for example new logic in a file it marked `config`), say so in the report and classify it yourself.
 4. If the test file exists, read it and check whether the changed behaviour is already tested. Choose `create`, `update` or `already covered`.
 5. If `<package>-tests-before.status` is `failed`, read the log and sort each failing test into one of three groups:
    - **Intended change**: the failure is caused by this pull request, and the title, description or a commit message states the new behaviour. The test may be updated to the stated behaviour.

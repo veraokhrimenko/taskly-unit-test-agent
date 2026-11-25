@@ -37,7 +37,7 @@ Write exactly one report. In a pull request run, post it with `add_comment`. In 
 ## Rules
 
 - Describe each test by the behaviour it checks, so a reviewer can judge it without opening the file.
-- Only report numbers you measured in this run. If something was not measured, write "not measured".
+- Only report numbers you measured in this run. For **Results** and **Coverage**, paste the tables printed by `verify-tests.mjs` (see `run-and-verify-tests`) without changing them. If something was not measured, write "not measured".
 - Put long output (more than 20 lines) in a `<details>` block. Never paste whole logs.
 - Never mention people with `@` and never include tokens, keys or environment variables.
 - Do not add signatures, attribution lines or links such as "Generated with …". The workflow adds its own footer.

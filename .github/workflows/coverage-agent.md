@@ -87,6 +87,8 @@ tools:
     - "npm run test:coverage:*"
     - "npm run typecheck:*"
     - "npm exec --prefix frontend -- prettier --write:*"
+    - "node .github/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs:*"
+    - "node .github/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
 
 network:
   allowed:

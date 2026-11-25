@@ -82,6 +82,8 @@ tools:
     - "npm run test:coverage:*"
     - "npm run typecheck:*"
     - "npm exec --prefix frontend -- prettier --write:*"
+    - "node .github/skills/analyze-pr-changes/scripts/classify-changes.mjs:*"
+    - "node .github/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
 
 network:
   allowed:
