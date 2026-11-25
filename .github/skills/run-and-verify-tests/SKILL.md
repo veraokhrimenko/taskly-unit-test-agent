@@ -31,6 +31,6 @@ Commit only when steps 3 and 4 pass:
 - `git commit -m "test: <what is now tested>"`
 - Push with `push_to_pull_request_branch`, or in a coverage task follow the task's instructions.
 
-If tests were already failing before your work (`<package>-tests-before.status` in the input folder is `failed`), do not push or open a pull request. Report the failing tests instead.
+If tests were already failing before your work (`<package>-tests-before.status` in the input folder is `failed`), push or open a pull request only when every one of those failures is an **intended change** (see `analyze-pr-changes`) and you updated those tests. Otherwise do not push or open a pull request, and report the failing tests as a possible breaking change or as unrelated.
 
 Keep the results (commands, passed and failed counts, coverage before and after, suspected bugs) for `report-results`.

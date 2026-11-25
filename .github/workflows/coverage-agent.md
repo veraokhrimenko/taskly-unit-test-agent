@@ -67,7 +67,7 @@ pre-agent-steps:
       for pkg in $(cat "$out/packages.txt"); do
         npm ci --prefix "$pkg" --ignore-scripts --no-audit --no-fund
         if [ "$pkg" = backend ]; then npm run db:generate --prefix backend; fi
-        if npm run test:coverage --prefix "$pkg" > "$out/$pkg-tests-before.log" 2>&1; then
+        if npm run test:coverage --prefix "$pkg" -- --coverage.reportOnFailure > "$out/$pkg-tests-before.log" 2>&1; then
           echo passed > "$out/$pkg-tests-before.status"
         else
           echo failed > "$out/$pkg-tests-before.status"

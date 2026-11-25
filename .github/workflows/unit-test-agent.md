@@ -42,6 +42,8 @@ pre-agent-steps:
         --jq '.[] | [.status, .filename] | @tsv' > "$out/changed-files.tsv"
       gh api -H "Accept: application/vnd.github.diff" "repos/$REPO/pulls/$PR_NUMBER" \
         > "$out/pr.diff" || echo "Diff too large for the API; use the file list." > "$out/pr.diff"
+      gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '{title, body}' > "$out/pr.json"
+      gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/commits" --jq '.[].commit.message' > "$out/commits.txt"
       cut -f2 "$out/changed-files.tsv" | cut -d/ -f1 | grep -xE 'backend|frontend' | sort -u > "$out/packages.txt" || true
 
   - name: Set up Node.js for the project
@@ -60,7 +62,7 @@ pre-agent-steps:
       for pkg in $(cat "$out/packages.txt"); do
         npm ci --prefix "$pkg" --ignore-scripts --no-audit --no-fund
         if [ "$pkg" = backend ]; then npm run db:generate --prefix backend; fi
-        if npm run test:coverage --prefix "$pkg" > "$out/$pkg-tests-before.log" 2>&1; then
+        if npm run test:coverage --prefix "$pkg" -- --coverage.reportOnFailure > "$out/$pkg-tests-before.log" 2>&1; then
           echo passed > "$out/$pkg-tests-before.status"
         else
           echo failed > "$out/$pkg-tests-before.status"
