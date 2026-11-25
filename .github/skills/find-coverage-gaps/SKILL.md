@@ -17,7 +17,7 @@ The task says how many source files you may choose at most.
 
 ## Steps
 
-1. List every file in the coverage summaries with its line, branch and function coverage.
+1. Read the coverage summaries with the Read tool and list every file with its line, branch and function coverage.
 2. Drop files the unit-test-engineer instructions say to skip: excluded from coverage, generated, types, constants, re-exports, bootstrap and wiring.
 3. Rank the rest:
    - First by priority group from "What to test": validation, mapping, branching, error handling, API responses and hooks before components with logic.
