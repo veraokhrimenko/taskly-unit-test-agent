@@ -32,3 +32,13 @@ Write exactly one report. In a pull request run, post it with `add_comment`. In 
 **Suspected bugs and open issues:** <list, or "None">
 
 **Skills used:** <in the order used>
+```
+
+## Rules
+
+- Describe each test by the behaviour it checks, so a reviewer can judge it without opening the file.
+- Only report numbers you measured in this run. If something was not measured, write "not measured".
+- Put long output (more than 20 lines) in a `<details>` block. Never paste whole logs.
+- Never mention people with `@` and never include tokens, keys or environment variables.
+- Do not add signatures, attribution lines or links such as "Generated with …". The workflow adds its own footer.
+- Leave out sections that do not apply, except **Decision** and **Skills used**.
