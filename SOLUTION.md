@@ -30,6 +30,7 @@ If tests are not needed, you get the report with the reason and no commit. If an
 
 **Security**
 
+- The agent has to read the PR's code to test it, so that code is treated as untrusted. The agent runs read-only in a sandbox, cannot change its own instructions, and everything it wants to publish is checked first. Tests are code and do run, in the agent's sandbox and in CI, as in any CI; this is why fork PRs are not processed.
 - The agent can only read. Writing happens in a separate step, limited to one comment and pushes of test files (or one draft PR).
 - The only secret is `ANTHROPIC_API_KEY`. A proxy holds it, and it is hidden from the agent.
 - Code, comments and PR text are treated as data: a prompt injection in a code comment was ignored and reported ([#14]). The agent's instructions, skills and scripts come from the base branch, so a PR cannot change the agent that checks it.
@@ -71,16 +72,32 @@ Three skills come with small Node scripts for the mechanical parts, which the ag
 
 ```mermaid
 flowchart TD
-    PR["Pull request opened or updated"] --> F{"Changes in backend/ or frontend/?"}
+    PR["Pull request opened or updated"] --> CI["CI checks the code as written<br/>(under a minute)"]
+    PR --> F{"Changes in backend/ or frontend/?"}
     F -- no --> N["Agent does not run"]
     F -- yes --> A["Author has write access, not a fork"]
     A --> B["Load the agent, skills and prompt from the base branch"]
     B --> P["Prepare the input: diff, PR text, dependencies, coverage before"]
-    P --> G["Agent in a read-only sandbox: decide, write and run tests"]
+    P --> G["Agent in a read-only sandbox: decide, write and run tests<br/>(a few minutes)"]
     G --> D["Threat detection and verification gate"]
     D -- "test files only, tests and typecheck pass" --> S["Push the tests as github-actions[bot] and post one report"]
     D -- "any check fails" --> X["Nothing is published"]
+    S --> CI2["CI on the bot's commit, after a maintainer approves it"]
 ```
+
+**Two different checks.** CI and the agent start at the same time. CI checks the code as the author wrote it and finishes in under a minute, so a PR that breaks tests shows a red CI first. The agent needs a few minutes, and the gate checks its work before anything is published. After the agent pushes tests, CI runs again on its commit.
+
+**Who does what**
+
+| Step | Done by |
+| --- | --- |
+| Prepare the input: diff, PR text, dependencies, coverage before | Workflow steps |
+| Classify the changed files and find their tests | Script (`classify-changes.mjs`) |
+| Decide what needs tests, write or update them, fix failing tests | **Agent** |
+| Run the whole suite and measure coverage | Script (`verify-tests.mjs`), run by the agent |
+| Write the report | **Agent**, with tables copied from the script |
+| Check the agent's patch | Gate script and a separate threat detection run |
+| Push the tests and post the report | gh-aw safe outputs |
 
 **How the agent uses the skills**
 
