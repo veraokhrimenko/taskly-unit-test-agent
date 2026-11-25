@@ -11,7 +11,7 @@ Follow the conventions of the existing colocated tests in `frontend/src/`. Read 
 
 - Put the test next to the source: `Name.tsx` → `Name.test.tsx`, `name.ts` → `name.test.ts`.
 - Use Vitest with React Testing Library. `src/test/setup.ts` already loads `jest-dom` matchers and cleans up after each test.
-- Match the file style: single quotes, no semicolons, top-level `it` blocks.
+- Match the file style: single quotes, no semicolons, top-level `it` blocks. When the test file is done, format it with Prettier, listing only your own test files by path from the repository root: `npm exec --prefix frontend -- prettier --write frontend/src/<path>.test.tsx`. CI fails on unformatted files.
 - Reuse `todoFixture` from `src/test/todoFixture`. You cannot create or change files in `src/test/`; define extra fixtures inside your test file.
 - Name tests by behaviour: `shows an error and retries when loading fails`.
 

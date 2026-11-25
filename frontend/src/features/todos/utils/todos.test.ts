@@ -34,9 +34,11 @@ describe('selectTodos', () => {
       { ...base, id: 2, completed: true },
       { ...base, id: 3 },
     ]
-    expect(selectTodos(todos, filter, '', 'priority').map((t) => t.id).sort()).toEqual(
-      [...ids].sort(),
-    )
+    expect(
+      selectTodos(todos, filter, '', 'priority')
+        .map((t) => t.id)
+        .sort(),
+    ).toEqual([...ids].sort())
   })
 
   it('sorts by due date with undated tasks last and ties by newest id', () => {
@@ -61,9 +63,9 @@ describe('selectTodos', () => {
   it('breaks priority ties by higher id', () => {
     const a: Todo = { ...base, id: 1 }
     const b: Todo = { ...base, id: 2 }
-    expect(selectTodos([a, b], 'all', '', 'priority').map((t) => t.id)).toEqual([
-      2, 1,
-    ])
+    expect(selectTodos([a, b], 'all', '', 'priority').map((t) => t.id)).toEqual(
+      [2, 1],
+    )
   })
 
   it('sorts by priority without changing the source array', () => {
@@ -104,7 +106,9 @@ describe('validateTodo', () => {
   })
 
   it('accepts a 2000 character description and rejects 2001', () => {
-    expect(validateTodo({ ...valid, description: 'x'.repeat(2000) })).toEqual({})
+    expect(validateTodo({ ...valid, description: 'x'.repeat(2000) })).toEqual(
+      {},
+    )
     expect(validateTodo({ ...valid, description: 'x'.repeat(2001) })).toEqual({
       description: 'The description must be at most 2000 characters.',
     })
@@ -121,7 +125,9 @@ describe('validateTodo', () => {
 
   it('reports several errors at once', () => {
     expect(
-      Object.keys(validateTodo({ ...valid, title: '', due_date: 'bad' })).sort(),
+      Object.keys(
+        validateTodo({ ...valid, title: '', due_date: 'bad' }),
+      ).sort(),
     ).toEqual(['due_date', 'title'])
   })
 })

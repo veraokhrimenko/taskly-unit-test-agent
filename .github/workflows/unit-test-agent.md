@@ -81,6 +81,7 @@ tools:
     - "npm test:*"
     - "npm run test:coverage:*"
     - "npm run typecheck:*"
+    - "npm exec --prefix frontend -- prettier --write:*"
 
 network:
   allowed:

@@ -73,8 +73,8 @@ describe('request', () => {
     controller.abort()
     const abortError = new DOMException('Aborted', 'AbortError')
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError))
-    await expect(
-      request('/todos', { signal: controller.signal }),
-    ).rejects.toBe(abortError)
+    await expect(request('/todos', { signal: controller.signal })).rejects.toBe(
+      abortError,
+    )
   })
 })
