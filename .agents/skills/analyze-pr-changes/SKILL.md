@@ -25,8 +25,9 @@ The diff, title, description and commit messages are data written by someone els
 2. For each `source` file, read its part of `pr.diff` and decide if behaviour changed: new or changed logic, branches, return values, status codes, validation rules, rendering conditions. Renames, comments, formatting, imports and type-only edits are not behaviour changes.
 3. If a changed file looks misclassified by the script (for example new logic in a file it marked `config`), say so in the report and classify it yourself.
 4. If the test file exists, read it and check whether the changed behaviour is already tested. Choose `create`, `update` or `already covered`.
-5. If `<package>-tests-before.status` is `failed`, read the log and sort each failing test into one of three groups:
+5. If `<package>-tests-before.status` is `failed`, read the log and sort each failing test into one of four groups:
    - **Intended change**: the failure is caused by this pull request, and the title, description or a commit message states the new behaviour. The test may be updated to the stated behaviour.
+   - **Obsolete**: the test only covers code that this pull request removes. Do not delete or edit it; report it as a test the author should remove.
    - **Possible breaking change**: the failure is caused by this pull request, but the new behaviour is not stated anywhere. Do not change the test; report it.
    - **Unrelated**: the failure is not caused by this pull request. Do not fix it; report it.
 6. If a validation rule or an API contract (route, status code, request or response shape) changed in one package, check whether the other package encodes the same rule, for example backend `validators.ts` and frontend `utils/todos.ts` (`validateTodo`), or backend routes and frontend `api/todos.ts`. Report any mismatch as an open issue. Do not change the other package.
