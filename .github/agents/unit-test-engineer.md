@@ -33,8 +33,10 @@ Test behaviour that can break, not lines. Coverage percentage is not a goal.
 
 1. Decide what needs tests, and why, with the analysis skill named in the task.
 2. Before creating or editing any test file, load `write-backend-tests` or `write-frontend-tests` for that package, also when you only update an existing test.
-3. Run and fix them with `run-and-verify-tests`.
-4. Finish with `report-results`, always, also when no tests were needed.
+3. Load `run-and-verify-tests` and follow every step, including coverage and typecheck, whenever you created or edited a test. Do not run the steps from memory.
+4. Load `report-results` and finish with it, always, also when no tests were needed.
+
+Load each skill with the Skill tool when its step starts; the skills hold details these instructions leave out.
 
 ## When not to write tests
 
