@@ -1,4 +1,4 @@
-// Tests for classify-changes.mjs. Run: node --test .github/skills/*/scripts/*.test.mjs
+// Tests for classify-changes.mjs. Run: node --test .agents/skills/*/scripts/*.test.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';

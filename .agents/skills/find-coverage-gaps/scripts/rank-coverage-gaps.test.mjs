@@ -1,4 +1,4 @@
-// Tests for rank-coverage-gaps.mjs. Run: node --test .github/skills/*/scripts/*.test.mjs
+// Tests for rank-coverage-gaps.mjs. Run: node --test .agents/skills/*/scripts/*.test.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';

@@ -17,7 +17,7 @@ The task says how many source files you may choose at most.
 
 ## Steps
 
-1. Run `node .github/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs`. It reads the files above, drops fully covered files and bootstrap and wiring, and ranks the rest: logic before components, then more uncovered branches, then more uncovered lines. Use its ranking; do not parse the coverage JSON by hand.
+1. Run `node .agents/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs`. It reads the files above, drops fully covered files and bootstrap and wiring, and ranks the rest: logic before components, then more uncovered branches, then more uncovered lines. Use its ranking; do not parse the coverage JSON by hand.
 2. Check the ranking against "What to test" in the unit-test-engineer instructions. You may skip a ranked file with a reason (for example markup without logic) and take the next one.
 3. Choose the top files, up to the limit in `max-files.txt`. For each one, read the source and its existing test file (if any) and list the untested behaviours you will cover.
 

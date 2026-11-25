@@ -2,7 +2,7 @@
 // Ranks source files by how much untested logic they have, so the agent starts from
 // numbers instead of reading the raw coverage JSON.
 //
-// Usage: node .github/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs [input-dir]
+// Usage: node .agents/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs [input-dir]
 // Input dir (default /tmp/gh-aw/agent/coverage): packages.txt, max-files.txt,
 // <package>-coverage-before.json. Prints Markdown tables to stdout.
 import { existsSync, readFileSync } from 'node:fs';

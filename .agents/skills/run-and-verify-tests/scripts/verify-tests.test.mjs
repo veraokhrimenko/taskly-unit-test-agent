@@ -1,4 +1,4 @@
-// Tests for verify-tests.mjs. Run: node --test .github/skills/*/scripts/*.test.mjs
+// Tests for verify-tests.mjs. Run: node --test .agents/skills/*/scripts/*.test.mjs
 // A fake "backend" package stands in for the real one, so no dependencies are installed.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';

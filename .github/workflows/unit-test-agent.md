@@ -23,11 +23,11 @@ imports:
   - shared/install-and-measure.md
 
 skills:
-  - .github/skills/analyze-pr-changes
-  - .github/skills/write-backend-tests
-  - .github/skills/write-frontend-tests
-  - .github/skills/run-and-verify-tests
-  - .github/skills/report-results
+  - .agents/skills/analyze-pr-changes
+  - .agents/skills/write-backend-tests
+  - .agents/skills/write-frontend-tests
+  - .agents/skills/run-and-verify-tests
+  - .agents/skills/report-results
 
 steps:
   - name: Collect PR context
@@ -60,8 +60,8 @@ tools:
     - "npm run test:coverage:*"
     - "npm run typecheck:*"
     - "npm exec --prefix frontend -- prettier --write:*"
-    - "node .github/skills/analyze-pr-changes/scripts/classify-changes.mjs:*"
-    - "node .github/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
+    - "node .agents/skills/analyze-pr-changes/scripts/classify-changes.mjs:*"
+    - "node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
 
 network:
   allowed:

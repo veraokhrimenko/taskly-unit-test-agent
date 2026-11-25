@@ -28,11 +28,11 @@ imports:
   - shared/install-and-measure.md
 
 skills:
-  - .github/skills/find-coverage-gaps
-  - .github/skills/write-backend-tests
-  - .github/skills/write-frontend-tests
-  - .github/skills/run-and-verify-tests
-  - .github/skills/report-results
+  - .agents/skills/find-coverage-gaps
+  - .agents/skills/write-backend-tests
+  - .agents/skills/write-frontend-tests
+  - .agents/skills/run-and-verify-tests
+  - .agents/skills/report-results
 
 steps:
   - name: Write the run scope
@@ -65,8 +65,8 @@ tools:
     - "npm run test:coverage:*"
     - "npm run typecheck:*"
     - "npm exec --prefix frontend -- prettier --write:*"
-    - "node .github/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs:*"
-    - "node .github/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
+    - "node .agents/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs:*"
+    - "node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
 
 network:
   allowed:

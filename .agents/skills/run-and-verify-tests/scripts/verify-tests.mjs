@@ -4,7 +4,7 @@
 // for report-results, so the reported numbers are always measured, never written by hand.
 //
 // Usage:
-//   node .github/skills/run-and-verify-tests/scripts/verify-tests.mjs <backend|frontend> \
+//   node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs <backend|frontend> \
 //     --input <dir> [--source <file,...>] [test files...]
 // Paths are relative to the repository root. Exit code 0 when every check passed.
 import { spawnSync } from 'node:child_process';

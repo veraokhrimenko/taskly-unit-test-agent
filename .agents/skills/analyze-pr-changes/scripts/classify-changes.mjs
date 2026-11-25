@@ -2,7 +2,7 @@
 // Classifies the files changed in a pull request by path, so the agent can spend
 // its reasoning on behaviour changes instead of on bookkeeping.
 //
-// Usage: node .github/skills/analyze-pr-changes/scripts/classify-changes.mjs [input-dir]
+// Usage: node .agents/skills/analyze-pr-changes/scripts/classify-changes.mjs [input-dir]
 // Input dir (default /tmp/gh-aw/agent/pr): changed-files.tsv, <package>-coverage-before.json,
 // <package>-tests-before.status. Prints a Markdown table to stdout.
 import { existsSync, readFileSync } from 'node:fs';

@@ -20,7 +20,7 @@ Run every command from the repository root with `--prefix`. Paths after `--` are
 3. When the new tests pass, run the final verification once per package you changed:
 
    ```
-   node .github/skills/run-and-verify-tests/scripts/verify-tests.mjs <package> --input <input folder> --source <source files, comma separated> <your test files>
+   node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs <package> --input <input folder> --source <source files, comma separated> <your test files>
    ```
 
    All paths are from the repository root. The input folder is named in the task (`/tmp/gh-aw/agent/pr/` in a pull request run). The script runs the whole suite with coverage, the typecheck, and Prettier on frontend test files, and prints the **Results** and **Coverage** tables with measured numbers. It exits with 1 if any check failed and lists the failing tests and log files.
