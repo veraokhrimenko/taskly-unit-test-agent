@@ -68,8 +68,11 @@ function summary(path) {
 }
 const before = summary(input && join(input, `${pkg}-coverage-before.json`));
 const after = summary(join(pkg, 'coverage', 'coverage-summary.json'));
-function cell(data) {
-  return data ? `${data.lines.pct}% / ${data.branches.pct}%` : 'not measured';
+function pct(data, metric) {
+  return data ? `${data[metric].pct}%` : 'not measured';
+}
+function row(scope, before, after) {
+  return `| ${scope} | ${pct(before, 'lines')} | ${pct(after, 'lines')} | ${pct(before, 'branches')} | ${pct(after, 'branches')} |`;
 }
 function fileEntry(data, file) {
   return data && Object.entries(data).find(([key]) => key.endsWith(`/${file}`))?.[1];
@@ -85,11 +88,12 @@ console.log(`| ${pkg} | \`npm run test:coverage --prefix ${pkg}\` | ${suite.ok ?
 console.log(`| ${pkg} | \`npm run typecheck --prefix ${pkg}\` | ${types.ok ? 'passed' : 'failed'} |`);
 if (format) console.log(`| ${pkg} | Prettier on the test files | ${format.ok ? 'passed' : 'failed'} |`);
 
-console.log('\n**Coverage (lines / branches)**\n');
-console.log('| Scope | Before | After |');
-console.log('| --- | --- | --- |');
-console.log(`| ${pkg} total | ${cell(before?.total)} | ${cell(after?.total)} |`);
-for (const file of sources) console.log(`| \`${file}\` | ${cell(fileEntry(before, file))} | ${cell(fileEntry(after, file))} |`);
+console.log('\n**Coverage**\n');
+console.log('| Scope | Lines before | Lines after | Branches before | Branches after |');
+console.log('| --- | --- | --- | --- | --- |');
+console.log(row(`${pkg}, all files`, before?.total, after?.total));
+for (const file of sources) console.log(row(`\`${file}\``, fileEntry(before, file), fileEntry(after, file)));
+console.log('\nLines: share of code lines the tests ran. Branches: share of decision paths (both sides of each `if`, `?:` and `??`) they took.');
 
 if (failing.length) console.log(`\nFailing tests:\n${failing.map((name) => `- ${name}`).join('\n')}`);
 const broken = [suite, types, format].filter((check) => check && !check.ok).map((check) => check.log);

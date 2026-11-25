@@ -25,9 +25,9 @@ Write exactly one report. In a pull request run, post it with `add_comment`. In 
 | --- | --- | --- |
 | backend | `npm test --prefix backend` | <passed> / <failed> |
 
-**Coverage (lines / branches)**
-| Package | Before | After |
-| --- | --- | --- |
+**Coverage**
+| Scope | Lines before | Lines after | Branches before | Branches after |
+| --- | --- | --- | --- | --- |
 
 **Suspected bugs and open issues:** <list, or "None">
 

@@ -55,8 +55,9 @@ test('prints measured results and coverage when every check passes', () => {
   assert.equal(status, 0);
   assert.match(stdout, /\| backend \| `npm run test:coverage --prefix backend` \| passed: 3 passed, 0 failed \(3 tests\) \|/);
   assert.match(stdout, /\| backend \| `npm run typecheck --prefix backend` \| passed \|/);
-  assert.match(stdout, /\| backend total \| 50% \/ 40% \| 70% \/ 60% \|/);
-  assert.match(stdout, /\| `backend\/src\/router\.ts` \| 80% \/ 50% \| 100% \/ 100% \|/);
+  assert.match(stdout, /\| Scope \| Lines before \| Lines after \| Branches before \| Branches after \|/);
+  assert.match(stdout, /\| backend, all files \| 50% \| 70% \| 40% \| 60% \|/);
+  assert.match(stdout, /\| `backend\/src\/router\.ts` \| 80% \| 100% \| 50% \| 100% \|/);
 });
 
 test('lists failing tests and exits with 1', () => {
