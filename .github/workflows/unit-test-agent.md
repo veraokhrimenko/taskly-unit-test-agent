@@ -20,6 +20,7 @@ max-turns: 60
 
 imports:
   - .github/agents/unit-test-engineer.md
+  - shared/install-and-measure.md
 
 skills:
   - .github/skills/analyze-pr-changes
@@ -28,7 +29,7 @@ skills:
   - .github/skills/run-and-verify-tests
   - .github/skills/report-results
 
-pre-agent-steps:
+steps:
   - name: Collect PR context
     env:
       GH_TOKEN: ${{ github.token }}
@@ -38,6 +39,7 @@ pre-agent-steps:
       set -euo pipefail
       out=/tmp/gh-aw/agent/pr
       mkdir -p "$out"
+      echo "AGENT_INPUT_DIR=$out" >> "$GITHUB_ENV"
       gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" \
         --jq '.[] | [.status, .filename] | @tsv' > "$out/changed-files.tsv"
       gh api -H "Accept: application/vnd.github.diff" "repos/$REPO/pulls/$PR_NUMBER" \
@@ -45,30 +47,6 @@ pre-agent-steps:
       gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '{title, body}' > "$out/pr.json"
       gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/commits" --jq '.[].commit.message' > "$out/commits.txt"
       cut -f2 "$out/changed-files.tsv" | cut -d/ -f1 | grep -xE 'backend|frontend' | sort -u > "$out/packages.txt" || true
-
-  - name: Set up Node.js for the project
-    uses: actions/setup-node@v7
-    with:
-      node-version: "24"
-      cache: npm
-      cache-dependency-path: |
-        backend/package-lock.json
-        frontend/package-lock.json
-
-  - name: Install dependencies and record coverage before the agent
-    run: |
-      set -euo pipefail
-      out=/tmp/gh-aw/agent/pr
-      for pkg in $(cat "$out/packages.txt"); do
-        npm ci --prefix "$pkg" --ignore-scripts --no-audit --no-fund
-        if [ "$pkg" = backend ]; then npm run db:generate --prefix backend; fi
-        if npm run test:coverage --prefix "$pkg" -- --coverage.reportOnFailure > "$out/$pkg-tests-before.log" 2>&1; then
-          echo passed > "$out/$pkg-tests-before.status"
-        else
-          echo failed > "$out/$pkg-tests-before.status"
-        fi
-        cp "$pkg/coverage/coverage-summary.json" "$out/$pkg-coverage-before.json" || true
-      done
 
 tools:
   edit:

@@ -25,6 +25,7 @@ max-turns: 120
 
 imports:
   - .github/agents/unit-test-engineer.md
+  - shared/install-and-measure.md
 
 skills:
   - .github/skills/find-coverage-gaps
@@ -33,7 +34,7 @@ skills:
   - .github/skills/run-and-verify-tests
   - .github/skills/report-results
 
-pre-agent-steps:
+steps:
   - name: Write the run scope
     env:
       PACKAGE: ${{ github.event.inputs.package }}
@@ -42,6 +43,7 @@ pre-agent-steps:
       set -euo pipefail
       out=/tmp/gh-aw/agent/coverage
       mkdir -p "$out"
+      echo "AGENT_INPUT_DIR=$out" >> "$GITHUB_ENV"
       case "$PACKAGE" in
         backend|frontend) echo "$PACKAGE" > "$out/packages.txt" ;;
         *) printf 'backend\nfrontend\n' > "$out/packages.txt" ;;
@@ -50,30 +52,6 @@ pre-agent-steps:
         3|5|8) echo "$MAX_FILES" > "$out/max-files.txt" ;;
         *) echo 5 > "$out/max-files.txt" ;;
       esac
-
-  - name: Set up Node.js for the project
-    uses: actions/setup-node@v7
-    with:
-      node-version: "24"
-      cache: npm
-      cache-dependency-path: |
-        backend/package-lock.json
-        frontend/package-lock.json
-
-  - name: Install dependencies and record coverage before the agent
-    run: |
-      set -euo pipefail
-      out=/tmp/gh-aw/agent/coverage
-      for pkg in $(cat "$out/packages.txt"); do
-        npm ci --prefix "$pkg" --ignore-scripts --no-audit --no-fund
-        if [ "$pkg" = backend ]; then npm run db:generate --prefix backend; fi
-        if npm run test:coverage --prefix "$pkg" -- --coverage.reportOnFailure > "$out/$pkg-tests-before.log" 2>&1; then
-          echo passed > "$out/$pkg-tests-before.status"
-        else
-          echo failed > "$out/$pkg-tests-before.status"
-        fi
-        cp "$pkg/coverage/coverage-summary.json" "$out/$pkg-coverage-before.json" || true
-      done
 
 tools:
   edit:
