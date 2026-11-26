@@ -34,7 +34,7 @@ On every pull request that changes code, the agent decides file by file whether 
 
 **Running**
 
-- **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent runs on opening and on every push that changes code, and comments in about 7 minutes.
+- **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent runs when the PR is opened and again on every push to the PR that changes code. Pushes to a branch without a PR do not start it. It comments in about 7 minutes.
 - **Coverage**: Actions → Coverage agent → Run workflow. Choose the package and how many files to cover (3, 5 or 8, so the PR stays reviewable).
 - **Changing the agent**: edit the `.md` files, run `gh aw compile` (gh-aw v1.2.2), and commit the `.md` and `.lock.yml` files together.
 
@@ -102,7 +102,7 @@ Test PR descriptions never state the expected result, because the agent reads th
 
 ## 7. What I would extend or change for production
 
-- Run the agent on PR opening and then only on request (a label or a comment), not on every push.
+- Run the agent when a PR is opened and then only on request (a label or a comment), not on every push to the PR.
 - Keyless authentication over OIDC instead of a stored API key.
 - Rulesets and CODEOWNERS for `main` and `.github/**`.
 - An evaluation suite built from the test PRs, to catch regressions when prompts change.
