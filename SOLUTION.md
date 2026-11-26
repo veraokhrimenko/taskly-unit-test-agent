@@ -4,7 +4,7 @@ An AI agent that writes unit tests for Taskly (React frontend, Express and Prism
 
 When a pull request that changes code is opened, the agent decides file by file whether tests are needed, writes them, runs them and posts a report. Its tests are checked independently before they are pushed, and the workflow posts its own measured results next to the agent's report. A second workflow, started by hand, opens a draft PR with tests for untested code.
 
-**See it in action:** demo PR [#1], a PR with the independent check ([#24]), and coverage PR [#10].
+**See it in action:** demo PR [#31], with the agent's report and the workflow's independent check side by side, and coverage PR [#10].
 
 ## 1. Main technical decisions and rationale
 
@@ -36,7 +36,7 @@ When a pull request that changes code is opened, the agent decides file by file 
 **Cost**
 
 - No run for PRs that change nothing under `backend/` or `frontend/`, none for draft PRs, and none for pushes.
-- Skills load only when their step starts, so the prompt carries only the instructions in use. In the demo run, 89% of the tokens were read from cache.
+- Skills load only when their step starts, so the prompt carries only the instructions in use. In the first demo run ([#1]), 89% of the tokens were read from cache.
 - `claude-sonnet-5-5` instead of Opus. Limits on turns (60, or 120 for coverage), time (20 or 40 minutes) and coverage files, and a spend limit on the key.
 - A PR run costs about $0.20–0.45 and takes 7 to 8 minutes. The model works for about 2 of them; the rest is the isolated setup and the checks.
 
@@ -47,7 +47,7 @@ When a pull request that changes code is opened, the agent decides file by file 
 - The agent's prompt, skills and scripts come from the base branch. The workflow file itself comes from the PR, as for every GitHub workflow, so people with write access are trusted, and CODEOWNERS covers `.github/` and `.agents/`. Fork PRs are not processed.
 - The Anthropic key is hidden from the agent, and the agent has no GitHub access: gh-aw's default GitHub server is turned off, because the agent never used it and it could read comments that anyone can write. Actions and containers are pinned.
 
-**What an external review changed.** I asked for a review of this solution and fixed what it found. Before it, the PR's tests ran on the runner in a job that also holds the API key, and the gate only compared file paths, so an agent could have skipped or removed a test. The check "do the new tests detect the change?" counted an import error as success. A coverage threshold in the project could block the agent in the exact case it exists for. All of this is fixed and was verified on [#24].
+**What an external review changed.** I asked for a review of this solution and fixed what it found. Before it, the PR's tests ran on the runner in a job that also holds the API key, and the gate only compared file paths, so an agent could have skipped or removed a test. The check "do the new tests detect the change?" counted an import error as success. A coverage threshold in the project could block the agent in the exact case it exists for. All of this is fixed and was verified on [#24] and [#31].
 
 ## 2. How to run the PR workflow and prerequisites
 
@@ -95,14 +95,18 @@ The coverage workflow starts with `find-coverage-gaps` and ends with a draft PR.
 
 ## 4. Example run: decisions, skills used and test results
 
-Demo PR [#1] makes task titles unique: the API returns 409 and the form shows an error. Agent run: [demo run]. It ran before the trigger changed to "once, then on request".
+Demo PR [#31] adds a feature without tests: task titles must be unique, the API returns 409 and the form shows an error. Agent run: [demo run]. It is the current pipeline from start to finish.
 
-- **Decisions**: tests for the router, repository, `validateTodo`, `TodoForm` and `TodoEditor`. None for `TodosPage.tsx` (it only passes a prop), types and `openapi.json`. Three existing tests broke on the new method and prop. The PR states the change, so the agent fixed them and kept every expectation.
+- **Before the agent**: CI failed on the feature commit, because existing tests did not know the new store method and the new prop.
+- **Decisions**: tests for the router, repository, `validateTodo`, `TodoForm` and `TodoEditor`. None for `TodosPage.tsx` (it only passes a prop), types and `openapi.json`. The broken router and `TodoEditor` tests were updated, because the PR states the change; every expectation was kept.
 - **Skills used**: all five PR skills.
-- **Results**: backend 79/79 and frontend 64/64 tests pass. Line coverage: backend 57% → 60%, frontend 68% → 73%, `TodoEditor.tsx` 46% → 92%.
-- **Time and cost**: about 7 minutes and $0.45.
+- **Results, measured again by the gate**: backend 81/81 and frontend 64/64 tests pass, no existing test removed, typecheck and Prettier pass. Line coverage: backend 57% → 60%, frontend 68% → 73%, `TodoEditor.tsx` 46% → 92%.
+- **Do the new tests detect the change?** Of 18 new tests, 9 fail on an assertion on the code from before the PR, 4 need code that the PR adds, and 5 also pass. Those 5 check what the change must not break, for example that a unique title is still submitted.
+- **After the agent**: the App pushed one commit with the tests, CI ran on it automatically and passed, and the agent did not start again.
+- **Reported, not fixed**: the frontend and the database may compare some non-ASCII titles differently, and the form's handling of the server's 409 has no test. In its report the agent also says that it did not read the frontend failure log, which the skill asks for.
+- **Time**: 8 minutes, of which the agent job (setup, baseline and the model) took 3.5. Token use was close to the first run of this feature ([#1], with the earlier pipeline), which cost about $0.45.
 
-PR [#24] shows the current pipeline. The agent wrote 13 tests for three small changes, and the gate measured them again: backend 82/82, frontend 58/58, no existing test removed. Of the 10 new backend tests, 2 fail on an assertion on the old code, 7 need code that the PR adds, and 1 also passes. One of the changes was below a 100% coverage threshold; the agent's tests brought it back above.
+PR [#24] was the first run of the hardened pipeline. The agent wrote 13 tests for three small changes, and the gate measured them again: backend 82/82, frontend 58/58, no existing test removed. Of the 10 new backend tests, 2 fail on an assertion on the old code, 7 need code that the PR adds, and 1 also passes. One of the changes was below a 100% coverage threshold; the agent's tests brought it back above.
 
 Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%. Coverage is a by-product here: the agent is told to test behaviour that can break, not to raise a number.
 
@@ -141,4 +145,5 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 [#6]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/6
 [#10]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/10
 [#24]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/24
-[demo run]: https://github.com/veraokhrimenko/taskly-unit-test-agent/actions/runs/45778366652
+[#31]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31
+[demo run]: https://github.com/veraokhrimenko/taskly-unit-test-agent/actions/runs/45818745058
