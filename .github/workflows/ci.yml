@@ -3,13 +3,10 @@
 name: CI
 
 on:
+  # Every pull request, also one that changes only documentation: the three jobs are required
+  # checks on main, and a required check that never starts would block the merge.
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - ".agents/skills/**"
-      - ".github/workflows/ci.yml"
   push:
     branches: [main]
     paths:

@@ -14,7 +14,7 @@ When a pull request that changes code is opened, the agent decides file by file 
 | **Checked before it is published** | A gate applies the agent's patch to a clean checkout and checks the tests themselves, not only the file paths (see below). The agent cannot influence it. |
 | **No tests that accept bugs** | The agent tests intended behaviour. It changes an existing test only when the PR text states the new behaviour, and it reports suspected bugs. |
 | **Runs once, then on request** | The agent runs when a PR is opened or leaves draft. After that it runs only when someone adds the label `unit-tests`. It does not push to the author's branch on every push, and each run is a decision, not a side effect. |
-| **Plain CI next to the agent** | CI runs without AI and decides whether a PR can be merged. The agent only adds tests. |
+| **Plain CI next to the agent** | CI runs without AI on every PR, and its three jobs are required checks on `main`, so it decides whether a PR can be merged. The agent only adds tests. |
 | **Published as a GitHub App** | With the default `GITHUB_TOKEN`, CI on the agent's commits waits for approval. With the App, it runs automatically. |
 
 **The agent only does the thinking.** The model is the expensive, non-deterministic part, and the part an attacker would target. So it gets only the work that needs judgment. Everything with one right answer is done by workflow steps and scripts, before or after it.
@@ -44,7 +44,7 @@ When a pull request that changes code is opened, the agent decides file by file 
 
 - Code from the PR, and tests written by the agent, never run on the runner itself. The agent works in a sandbox behind a firewall, where it can edit its checkout and run a short list of commands, and it has no write access to GitHub. The baseline and the gate run in containers that see only the checkout and have no network once dependencies are installed. In them `.git` is read-only, so a test cannot plant a Git setting that would run on the runner later, and they can write results only to a folder of their own, not to the gate's summary.
 - A separate job publishes, and only after the gate and threat detection (a second AI check for prompt injection, leaked secrets and malicious code) pass.
-- The agent's prompt, skills and scripts come from the base branch. The workflow file itself comes from the PR, as for every GitHub workflow, so people with write access are trusted, and CODEOWNERS covers `.github/` and `.agents/`. Fork PRs are not processed.
+- The agent's prompt, skills and scripts come from the base branch. The workflow file comes from the PR, as for every GitHub workflow, and so does the gate script: the gate job checks out the PR's merge commit and copies the script aside before it applies the agent's patch. The agent cannot change the gate, but a PR author can, so people with write access are trusted. A ruleset on `main` requires a pull request, passing CI and, for `.github/` and `.agents/`, the owner's review (CODEOWNERS). The owner can bypass it, because this repository has no second reviewer. Fork PRs are not processed.
 - The Anthropic key is hidden from the agent, and the agent has no GitHub access: gh-aw's default GitHub server is turned off, because the agent never used it and it could read comments that anyone can write. Actions and containers are pinned.
 
 **What an external review changed.** I asked for a review of this solution and fixed what it found. Before it, the PR's tests ran on the runner in a job that also holds the API key, and the gate only compared file paths, so an agent could have skipped or removed a test. The check "do the new tests detect the change?" counted an import error as success. A coverage threshold in the project could block the agent in the exact case it exists for. All of this is fixed and was verified on [#24] and [#31].
@@ -122,6 +122,7 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 
 - When a PR removes code, tests for that code are obsolete. The agent names them and the author removes them; the agent's own new tests are shown in its report but not pushed while the suite is red.
 - The gate notices removed tests and removed assertions, but not an assertion rewritten to check less.
+- A test runs in the same process that writes the test report the gate reads, so a malicious test could forge the counts. The containers limit what such a test can reach, not what it reports.
 - A PR uses the workflow and the agent as they were when its branch was last updated with `main`.
 - Each scenario was run a few times, not enough to measure how much the results vary. The injection test is one obvious comment, not a determined attack.
 - The scripts map a source file to its test by file name, and the coverage ranking knows Taskly's folders. Another project would need to adjust both.
@@ -134,7 +135,7 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 - Let the agent delete an obsolete test when code can prove that it only covers removed code.
 - Mutation testing and property-based tests, to measure test strength instead of coverage.
 - Keyless authentication over OIDC instead of a stored API key.
-- A ruleset that requires an owner's review for `.github/**` and `.agents/**`.
+- A second maintainer, so that the owner's review of `.github/**` and `.agents/**` needs no bypass, and the gate script taken from the base branch.
 - More context about intent, such as linked issues and review comments from people with write access, prepared as input like the PR text.
 
 [#1]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/1
