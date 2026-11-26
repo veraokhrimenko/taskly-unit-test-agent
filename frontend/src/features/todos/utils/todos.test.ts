@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { formatDate, isOverdue, selectTodos, validateTodo } from './todos'
+import {
+  countHighPriority,
+  formatDate,
+  isOverdue,
+  selectTodos,
+  validateTodo,
+} from './todos'
 import type { Todo } from '../types'
 
 const base: Todo = {
@@ -157,6 +163,32 @@ describe('isOverdue', () => {
       isOverdue({ ...base, due_date: '2026-11-01', completed: true }),
     ).toBe(false)
     expect(isOverdue({ ...base, due_date: null })).toBe(false)
+  })
+})
+
+describe('countHighPriority', () => {
+  it('counts only open tasks with high priority', () => {
+    const todos: Todo[] = [
+      { ...base, id: 1, priority: 'high' },
+      { ...base, id: 2, priority: 'high' },
+      { ...base, id: 3, priority: 'high', completed: true },
+      { ...base, id: 4, priority: 'medium' },
+      { ...base, id: 5, priority: 'low' },
+    ]
+    expect(countHighPriority(todos)).toBe(2)
+  })
+
+  it('returns 0 for an empty list', () => {
+    expect(countHighPriority([])).toBe(0)
+  })
+
+  it('returns 0 when every high priority task is completed', () => {
+    expect(
+      countHighPriority([
+        { ...base, id: 1, priority: 'high', completed: true },
+        { ...base, id: 2, priority: 'low' },
+      ]),
+    ).toBe(0)
   })
 })
 
