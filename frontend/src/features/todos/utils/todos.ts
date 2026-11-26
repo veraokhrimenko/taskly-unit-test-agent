@@ -73,3 +73,7 @@ export function formatDate(date: string): string {
 export function countActive(todos: Todo[]): number {
   return todos.filter((todo) => !todo.completed).length
 }
+
+export function countDone(todos: Todo[]): number {
+  return todos.filter((todo) => todo.completed).length
+}
