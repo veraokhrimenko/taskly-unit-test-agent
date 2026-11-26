@@ -4,10 +4,10 @@
 //
 // Usage: node patch-rules.mjs <start-commit>
 // Compares the working tree with the commit the agent started from. Prints one line per
-// broken rule. Exit code 0: no rule broken. 3: at least one rule broken. Anything else: the
+// broken rule. Exit code 0 and the line "patch rules: passed": no rule broken. 3: at least one rule broken. Anything else: the
 // check itself failed, and the caller must treat that as a failure too.
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 // Test files the agent may add or change. Fixtures and helpers are not included.
@@ -70,7 +70,10 @@ export function patchProblems(start) {
   return problems;
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+// Run as a command. The paths are compared after resolving links, because a temporary folder
+// is often a link, and a script that does not recognise itself would exit with 0 and check
+// nothing. For the same reason it prints one line on success, which the gate requires.
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
   const start = process.argv[2];
   if (!start) {
     console.error('usage: patch-rules.mjs <start-commit>');
@@ -78,5 +81,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   }
   const problems = patchProblems(start);
   for (const problem of problems) console.log(problem);
+  if (!problems.length) console.log('patch rules: passed');
   process.exit(problems.length ? 3 : 0);
 }
