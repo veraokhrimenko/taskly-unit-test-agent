@@ -13,6 +13,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { patchProblems, titles } from './patch-rules.mjs';
 
 const [pkg, ...rest] = process.argv.slice(2);
 if (pkg !== 'backend' && pkg !== 'frontend') {
@@ -103,57 +104,27 @@ console.log(row(`${pkg}, all files`, before?.total, after?.total));
 for (const file of sources) console.log(row(`\`${file}\``, fileEntry(before, file), fileEntry(after, file)));
 console.log('\nLines: share of code lines the tests ran. Branches: share of decision paths (both sides of each `if`, `?:` and `??`) they took.');
 
-// 5. The rules the gate applies to the patch. A patch that breaks one is rejected after the
-// run, when nothing can be fixed any more, so they are checked here first.
-function git(args) {
-  const result = spawnSync('git', args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  return result.status === 0 ? result.stdout : null;
-}
+// 5. The rules the gate applies to the patch (patch-rules.mjs, the same module the gate uses).
+// A patch that breaks one is rejected after the run, when nothing can be fixed any more.
 function lines(path) {
   return path && existsSync(path) ? readFileSync(path, 'utf8').split('\n').filter(Boolean) : [];
 }
-function count(text, pattern) {
-  return (text.match(pattern) ?? []).length;
-}
-// Test titles in a source file. Titles with placeholders (it.each) cannot be compared.
-function titles(source) {
-  const pattern = /\b(?:it|test)(?:\.each\([^)]*\))?\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g;
-  return [...source.matchAll(pattern)].map((match) => match[2]).filter((title) => !/%|\$\{|\$[a-zA-Z]/.test(title));
-}
 const start = lines(input && join(input, 'agent-start.sha'))[0] ?? 'HEAD';
-const switchedOff = /\b(?:it|test|describe|suite|bench)(?:\.[a-zA-Z]+)*\.(?:skip|only|todo|fails|skipIf|runIf)\b|\b(?:xit|xtest|xdescribe|fit|fdescribe)\(/g;
-const problems = [];
-const oldTitles = new Map();
-for (const file of tests) {
-  if (!existsSync(file)) {
-    problems.push(`\`${file}\` does not exist`);
-    continue;
-  }
-  const now = readFileSync(file, 'utf8');
-  const old = git(['show', `${start}:${file}`]);
-  oldTitles.set(file, new Set(old ? titles(old) : []));
-  if (count(now, switchedOff) > count(old ?? '', switchedOff)) problems.push(`\`${file}\` adds \`.skip\`, \`.only\` or \`.todo\``);
-  if (!old) continue;
-  const before = count(old, /expect\(/g);
-  const after = count(now, /expect\(/g);
-  if (after < before) problems.push(`\`${file}\` has fewer \`expect(\` calls than before (${before} before, ${after} now)`);
-  for (const title of oldTitles.get(file)) {
-    if (!now.includes(title)) problems.push(`\`${file}\`: the existing test "${title}" was removed or renamed`);
-  }
-}
-const allowed = /^backend\/tests\/.+\.test\.ts$|^frontend\/src\/.+\.test\.tsx?$/;
-for (const line of (git(['diff', '--name-status', '--no-renames', start]) ?? '').split('\n').filter(Boolean)) {
-  const [status, file] = line.split('\t');
-  if (status === 'D') problems.push(`\`${file}\` was deleted`);
-  else if (!allowed.test(file)) problems.push(`\`${file}\` is not a test file and may not change`);
-}
-// New files count only inside the two packages: the workflow itself leaves folders such as
-// .claude/ in the checkout.
-for (const file of (git(['ls-files', '--others', '--exclude-standard', '--', 'backend', 'frontend']) ?? '').split('\n').filter(Boolean)) {
-  if (!allowed.test(file)) problems.push(`\`${file}\` is not a test file and may not be added`);
+let problems;
+try {
+  problems = patchProblems(start);
+} catch (error) {
+  problems = [`the rules could not be checked: ${error.message.split('\n')[0]}`];
 }
 console.log(`\n**Patch rules:** ${problems.length ? 'failed. The gate will reject the patch:' : 'passed'}`);
 for (const problem of problems) console.log(`- ${problem}`);
+
+// Titles that each test file had before the agent's work, to tell new tests from old ones.
+const oldTitles = new Map();
+for (const file of tests) {
+  const old = spawnSync('git', ['show', `${start}:${file}`], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  oldTitles.set(file, new Set(old.status === 0 ? titles(old.stdout) : []));
+}
 
 // 6. Do the new tests depend on the change? Run them on the source files from before the pull
 // request, which the workflow saved in the input folder, and put the current files back.

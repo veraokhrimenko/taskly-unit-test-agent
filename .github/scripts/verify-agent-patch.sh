@@ -31,9 +31,6 @@ out="${GATE_OUT:-${RUNNER_TEMP:-/tmp}/gate-out}"
 box_out="$out/box"
 mkdir -p "$box_out"
 
-# Test files the agent may add or change. Fixtures and helpers are not included.
-test_files='^backend/tests/.+\.test\.ts$|^frontend/src/.+\.test\.tsx?$'
-
 # Print to the step summary and keep a copy for the pull request comment.
 say() { tee -a "$summary" >> "$out/summary.md"; }
 
@@ -95,6 +92,24 @@ export_old_sources() {
   done || true
 }
 
+# Claude Code reads instruction files such as CLAUDE.md from the folders it works in. The agent's
+# instructions come from the base branch, so such a file from the pull request, or one that a
+# test created during the baseline, must not reach the agent.
+guard_instruction_files() {
+  local file
+  while IFS= read -r file; do
+    file="${file#./}"
+    if git ls-files --error-unmatch -- "$file" > /dev/null 2>&1; then
+      if [ -n "${PR_BASE:-}" ] && git diff --quiet "$PR_BASE" -- "$file" 2> /dev/null; then continue; fi
+      echo "::error::The pull request adds or changes the agent instruction file $file. The agent does not run on such a pull request."
+      exit 1
+    fi
+    echo "::warning::Removed the instruction file $file, which is not part of the repository."
+    rm -f "$file"
+  done < <(find . \( -name node_modules -o -name .git -o -path ./.github -o -path ./.agents -o -path ./.claude \) -prune \
+    -o -type f \( -name CLAUDE.md -o -name CLAUDE.local.md -o -name AGENTS.md \) -print)
+}
+
 baseline() {
   local pkg="$1"
   export_old_sources "$pkg"
@@ -116,6 +131,7 @@ baseline() {
     echo failed > "$out/$pkg-tests-before.status"
   fi
   cp "$pkg/coverage/coverage-summary.json" "$out/$pkg-coverage-before.json" 2>/dev/null || true
+  guard_instruction_files
 }
 
 apply_patch() {
@@ -137,10 +153,8 @@ apply_patch() {
   git checkout --quiet --detach "$base"
   git -c user.name=verify -c user.email=verify@localhost am --quiet "$patch"
 
-  local changed deleted disallowed
+  local changed
   changed=$(git diff --name-only --no-renames "$base"..HEAD)
-  deleted=$(git diff --name-only --no-renames --diff-filter=D "$base"..HEAD)
-  disallowed=$(printf '%s\n' "$changed" | grep -vE "$test_files" || true)
 
   {
     echo "### Agent patch"
@@ -149,36 +163,17 @@ apply_patch() {
     echo
   } | say
 
-  # Only test files may change, and no test file may be deleted.
-  if [ -n "$disallowed" ]; then
-    echo "::error::Agent patch changes files that are not test files: $(echo $disallowed)"
+  # The patch rules: test files only, nothing deleted, no test renamed or switched off, no
+  # assertion removed. The same module that the agent runs before it commits. It only reads
+  # files, so it runs on the runner. Exit code 3 means a broken rule; any other failure of the
+  # check is a failure of the gate.
+  local problems code
+  problems=$(node "$here/patch-rules.mjs" "$base") && code=0 || code=$?
+  if [ "$code" -ne 0 ]; then
+    if [ "$code" -eq 3 ]; then echo "::error::Agent patch breaks the patch rules:"; else echo "::error::The patch rules could not be checked (exit $code)"; fi
+    printf '%s\n' "$problems"
     exit 1
   fi
-  if [ -n "$deleted" ]; then
-    echo "::error::Agent patch deletes test files: $(echo $deleted)"
-    exit 1
-  fi
-
-  # No test may be switched off.
-  local switched_off
-  switched_off=$(git diff -U0 "$base"..HEAD | grep -E '^\+[^+]' \
-    | grep -E '\b(it|test|describe|suite|bench)(\.[a-zA-Z]+)*\.(skip|only|todo|fails|skipIf|runIf)\b|\b(xit|xtest|xdescribe|fit|fdescribe)\(' || true)
-  if [ -n "$switched_off" ]; then
-    echo "::error::Agent patch skips or narrows tests:"
-    printf '%s\n' "$switched_off"
-    exit 1
-  fi
-
-  # An existing test file may not lose assertions.
-  local file before after
-  for file in $(git diff --name-only --no-renames --diff-filter=M "$base"..HEAD); do
-    before=$(git show "$base:$file" | grep -o 'expect(' | wc -l | tr -d " ")
-    after=$(grep -o 'expect(' "$file" | wc -l | tr -d " ")
-    if [ "$after" -lt "$before" ]; then
-      echo "::error::Agent patch removes assertions from $file ($before before, $after after)"
-      exit 1
-    fi
-  done
 
   # Tell the next steps which packages to verify, and where the agent started.
   echo "$base" > "$out/agent-base"
@@ -202,7 +197,7 @@ check_tests_kept() {
   box none "$pkg" npx vitest list "--json=/out/$pkg-names-after.json" $changed > /dev/null
   [ -n "$modified" ] || return 0
 
-  local file removed=""
+  local file removed="" code=0
   # Put the old versions back for a moment to list their tests.
   for file in $modified; do
     git checkout --quiet "$base" -- "$pkg/$file" || { echo "::error::Cannot read the old version of $pkg/$file"; return 1; }
@@ -212,7 +207,7 @@ check_tests_kept() {
     for file in $modified; do
       git checkout --quiet HEAD -- "$pkg/$file" || { echo "::error::Cannot restore $pkg/$file"; return 1; }
     done
-    removed=$(box none "$pkg" node /gate/gate-report.mjs removed "/out/$pkg-names-before.json" "/out/$pkg-names-after.json") || true
+    removed=$(box none "$pkg" node /gate/gate-report.mjs removed "/out/$pkg-names-before.json" "/out/$pkg-names-after.json") && code=0 || code=$?
   else
     # The old version cannot be collected (for example it imports removed code): read its titles.
     echo '[]' > "$box_out/$pkg-names-before.json"
@@ -225,12 +220,15 @@ check_tests_kept() {
     done
     # shellcheck disable=SC2086
     removed=$(box none "$pkg" node /gate/gate-report.mjs static-removed "/out/$pkg-names-after.json" \
-      --before-out "/out/$pkg-names-before.json" $copies) || true
+      --rules /gate/patch-rules.mjs --before-out "/out/$pkg-names-before.json" $copies) && code=0 || code=$?
   fi
 
-  if [ -n "$removed" ]; then
+  if [ "$code" -eq 3 ]; then
     echo "::error::Agent patch removes or renames existing tests in $pkg:"
     printf '%s\n' "$removed"
+    return 1
+  elif [ "$code" -ne 0 ]; then
+    echo "::error::The check that existing tests are kept failed for $pkg (exit $code)"
     return 1
   fi
 }
