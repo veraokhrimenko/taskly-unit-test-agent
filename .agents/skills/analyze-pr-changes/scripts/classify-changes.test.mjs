@@ -23,6 +23,8 @@ function setup(changed) {
   writeFileSync(join(input, 'backend-coverage-before.json'), summary('backend', ['src/features/todos/router.ts', 'src/core/config.ts']));
   writeFileSync(join(input, 'frontend-coverage-before.json'), summary('frontend', ['src/lib/http.ts', 'src/App.tsx']));
   writeFileSync(join(input, 'backend-tests-before.status'), 'failed\n');
+  writeFileSync(join(input, 'frontend-tests-before.status'), 'passed\n');
+  writeFileSync(join(input, 'frontend-thresholds-before.status'), 'failed\n');
   return spawnSync(process.execPath, [script, input], { cwd: repo, encoding: 'utf8' });
 }
 
@@ -72,4 +74,10 @@ test('fails clearly without a changed-files list', () => {
   const result = spawnSync(process.execPath, [script, input], { encoding: 'utf8' });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /No changed-files\.tsv/);
+});
+
+test('says when coverage thresholds were not met before the agent', () => {
+  const { stdout } = setup([['modified', 'frontend/src/lib/http.ts']]);
+  assert.match(stdout, /\| backend \| failed \|/);
+  assert.match(stdout, /\| frontend \| passed, coverage thresholds not met \|/);
 });

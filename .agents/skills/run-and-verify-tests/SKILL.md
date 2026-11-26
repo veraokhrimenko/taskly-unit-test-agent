@@ -36,4 +36,6 @@ Commit only when the verification script passes:
 
 If tests were already failing before your work (`<package>-tests-before.status` in the input folder is `failed`), push or open a pull request only when every one of those failures is an **intended change** (see `analyze-pr-changes`) and you updated those tests. Otherwise do not push or open a pull request, and report the failing tests as obsolete, a possible breaking change or unrelated.
 
-Keep the script's tables and any suspected bugs for `report-results`.
+A coverage threshold that was not met before your work (`<package>-thresholds-before.status`) does not block the push: your tests should bring the changed code above it. If the script still reports the thresholds as failed, add the missing tests.
+
+Keep the script's tables and any suspected bugs for `report-results`. If you wrote tests that you may not push, keep their code too.

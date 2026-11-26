@@ -68,42 +68,35 @@ safe-outputs:
           echo "::error::The agent job did not succeed, so nothing will be published."
           exit 1
 
-      - name: Apply agent patch and check changed files
+      - name: Apply agent patch and check what it changes
         id: patch
         if: needs.agent.outputs.has_patch == 'true'
         run: |
-          cp .github/scripts/verify-agent-patch.sh "$RUNNER_TEMP/verify-agent-patch.sh"
-          bash "$RUNNER_TEMP/verify-agent-patch.sh" apply /tmp/gh-aw/aw-*.patch
-
-      - name: Set up Node.js 24 for backend
-        if: steps.patch.outputs.backend == 'true'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
+          mkdir -p "$RUNNER_TEMP/gate"
+          cp .github/scripts/verify-agent-patch.sh .github/scripts/gate-report.mjs "$RUNNER_TEMP/gate/"
+          bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" apply /tmp/gh-aw/aw-*.patch
 
       - name: Verify backend tests
         if: steps.patch.outputs.backend == 'true'
-        run: bash "$RUNNER_TEMP/verify-agent-patch.sh" test backend
-
-      - name: Set up Node.js 22 for frontend
-        if: steps.patch.outputs.frontend == 'true'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+        run: bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" test backend
 
       - name: Verify frontend tests
         if: steps.patch.outputs.frontend == 'true'
-        run: bash "$RUNNER_TEMP/verify-agent-patch.sh" test frontend
+        run: bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" test frontend
+
+      - name: Keep the gate's results for the pull request comment
+        if: always() && steps.patch.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gate-summary
+          path: ${{ runner.temp }}/gate-out/summary.md
+          if-no-files-found: ignore
 
   create-pull-request:
     title-prefix: "[unit-test-agent] "
     draft: true
     allowed-files:
-      - "backend/tests/**"
+      - "backend/tests/**/*.test.ts"
       - "frontend/src/**/*.test.ts"
       - "frontend/src/**/*.test.tsx"
 ---

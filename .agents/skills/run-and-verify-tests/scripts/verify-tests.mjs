@@ -87,7 +87,10 @@ const counts = report
 console.log('**Results**\n');
 console.log('| Package | Check | Result |');
 console.log('| --- | --- | --- |');
-console.log(`| ${pkg} | \`npm run test:coverage --prefix ${pkg}\` | ${suite.ok ? 'passed' : 'failed'}: ${counts} |`);
+// A failed run with no failing test means a coverage threshold from the project's config is not met.
+const thresholdsOnly = !suite.ok && report && report.numFailedTests === 0 && report.numTotalTests > 0;
+console.log(`| ${pkg} | \`npm run test:coverage --prefix ${pkg}\` | ${suite.ok || thresholdsOnly ? 'passed' : 'failed'}: ${counts} |`);
+console.log(`| ${pkg} | Coverage thresholds | ${thresholdsOnly ? 'failed: see the end of the test log' : suite.ok ? 'passed' : 'not checked'} |`);
 console.log(`| ${pkg} | \`npm run typecheck --prefix ${pkg}\` | ${types.ok ? 'passed' : 'failed'} |`);
 if (format) console.log(`| ${pkg} | Prettier on the test files | ${format.ok ? 'passed' : 'failed'} |`);
 

@@ -26,7 +26,7 @@ if (process.env.FAKE_NO_COVERAGE !== '1') {
     '/runner/repo/backend/src/router.ts': { lines: { pct: 100 }, branches: { pct: 100 } },
   }));
 }
-process.exit(failed ? 1 : 0);
+process.exit(failed || process.env.FAKE_THRESHOLDS === '1' ? 1 : 0);
 `;
 
 function setup() {
@@ -83,6 +83,13 @@ test('does not report coverage left by an earlier run when the suite writes none
   assert.equal(status, 1);
   assert.match(stdout, /\| backend, all files \| 50% \| not measured \| 40% \| not measured \|/);
   assert.doesNotMatch(stdout, /99%/);
+});
+
+test('reports unmet coverage thresholds separately from failing tests', () => {
+  const { stdout, status } = verify(['backend', '--input', '$INPUT'], { FAKE_THRESHOLDS: '1' });
+  assert.equal(status, 1);
+  assert.match(stdout, /\| backend \| `npm run test:coverage --prefix backend` \| passed: 3 passed, 0 failed \(3 tests\) \|/);
+  assert.match(stdout, /\| backend \| Coverage thresholds \| failed/);
 });
 
 test('rejects anything that is not a test file of the package', () => {

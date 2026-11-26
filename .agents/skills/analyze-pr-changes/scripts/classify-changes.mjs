@@ -86,5 +86,8 @@ console.log('\n| Package | Tests before |');
 console.log('| --- | --- |');
 for (const pkg of packages) {
   const status = read(`${pkg}-tests-before.status`);
-  if (status) console.log(`| ${pkg} | ${status.trim()} |`);
+  if (!status) continue;
+  // Tests can pass while a coverage threshold from the project's config is not met.
+  const thresholds = read(`${pkg}-thresholds-before.status`) ? ', coverage thresholds not met' : '';
+  console.log(`| ${pkg} | ${status.trim()}${thresholds} |`);
 }

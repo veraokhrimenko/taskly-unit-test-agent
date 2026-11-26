@@ -1,7 +1,11 @@
 ---
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    # Runs once when a pull request is opened or leaves draft, and again only on request:
+    # add the label "unit-tests". Pushes do not start it.
+    types: [opened, reopened, ready_for_review, labeled]
+    names: [unit-tests]
+    draft: false
     paths:
       - "backend/**"
       - "frontend/**"
@@ -15,10 +19,11 @@ engine:
   id: claude
   model: claude-sonnet-5-5
 strict: true
-# Pushes by people share one group, so a new push cancels the run for the previous one.
-# Each push by a bot gets its own group, so it never cancels a run that is still publishing.
+# One run at a time per pull request; a newer request cancels the older run.
+# A run that only exists because some other label was added gets its own group, so it
+# cannot cancel a real run.
 concurrency:
-  group: "gh-aw-${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ endsWith(github.actor, '[bot]') && github.run_id || 'author' }}"
+  group: "gh-aw-${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'unit-tests') && github.run_id || 'agent' }}"
   cancel-in-progress: true
 timeout-minutes: 20
 max-turns: 60
@@ -49,7 +54,7 @@ steps:
       gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" \
         --jq '.[] | [.status, .filename] | @tsv' > "$out/changed-files.tsv"
       gh api -H "Accept: application/vnd.github.diff" "repos/$REPO/pulls/$PR_NUMBER" \
-        > "$out/pr.diff" || echo "Diff too large for the API; use the file list." > "$out/pr.diff"
+        > "$out/pr.diff" || echo "The diff could not be fetched (it may be too large, or the API failed); use the file list and read the files." > "$out/pr.diff"
       gh api "repos/$REPO/pulls/$PR_NUMBER" --jq '{title, body}' > "$out/pr.json"
       gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/commits" --jq '.[].commit.message' > "$out/commits.txt"
       cut -f2 "$out/changed-files.tsv" | cut -d/ -f1 | grep -xE 'backend|frontend' | sort -u > "$out/packages.txt" || true
@@ -68,59 +73,50 @@ safe-outputs:
           echo "::error::The agent job did not succeed, so nothing will be published."
           exit 1
 
-      - name: Apply agent patch and check changed files
+      - name: Apply agent patch and check what it changes
         id: patch
         if: needs.agent.outputs.has_patch == 'true'
         run: |
-          cp .github/scripts/verify-agent-patch.sh "$RUNNER_TEMP/verify-agent-patch.sh"
-          bash "$RUNNER_TEMP/verify-agent-patch.sh" apply /tmp/gh-aw/aw-*.patch
-
-      - name: Set up Node.js 24 for backend
-        if: steps.patch.outputs.backend == 'true'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
+          mkdir -p "$RUNNER_TEMP/gate"
+          cp .github/scripts/verify-agent-patch.sh .github/scripts/gate-report.mjs "$RUNNER_TEMP/gate/"
+          bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" apply /tmp/gh-aw/aw-*.patch
 
       - name: Verify backend tests
         if: steps.patch.outputs.backend == 'true'
-        run: bash "$RUNNER_TEMP/verify-agent-patch.sh" test backend
+        run: bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" test backend
 
       - name: Check that backend tests detect the change
         if: steps.patch.outputs.backend == 'true'
         continue-on-error: true
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          AGENT_BASE: ${{ steps.patch.outputs.agent_base }}
-        run: bash "$RUNNER_TEMP/verify-agent-patch.sh" old-code backend "$PR_BASE" "$AGENT_BASE"
-
-      - name: Set up Node.js 22 for frontend
-        if: steps.patch.outputs.frontend == 'true'
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+        run: bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" old-code backend "$PR_BASE"
 
       - name: Verify frontend tests
         if: steps.patch.outputs.frontend == 'true'
-        run: bash "$RUNNER_TEMP/verify-agent-patch.sh" test frontend
+        run: bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" test frontend
 
       - name: Check that frontend tests detect the change
         if: steps.patch.outputs.frontend == 'true'
         continue-on-error: true
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}
-          AGENT_BASE: ${{ steps.patch.outputs.agent_base }}
-        run: bash "$RUNNER_TEMP/verify-agent-patch.sh" old-code frontend "$PR_BASE" "$AGENT_BASE"
+        run: bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" old-code frontend "$PR_BASE"
+
+      - name: Keep the gate's results for the pull request comment
+        if: always() && steps.patch.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gate-summary
+          path: ${{ runner.temp }}/gate-out/summary.md
+          if-no-files-found: ignore
 
   add-comment:
     max: 1
     hide-older-comments: true
   push-to-pull-request-branch:
     allowed-files:
-      - "backend/tests/**"
+      - "backend/tests/**/*.test.ts"
       - "frontend/src/**/*.test.ts"
       - "frontend/src/**/*.test.tsx"
 ---

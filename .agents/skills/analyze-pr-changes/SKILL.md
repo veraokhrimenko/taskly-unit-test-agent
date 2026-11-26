@@ -14,6 +14,7 @@ All in `/tmp/gh-aw/agent/pr/`, prepared before you start:
 - `pr.json` and `commits.txt`: the pull request title and description, and the commit messages.
 - `packages.txt`: the affected packages (`backend`, `frontend`).
 - `<package>-tests-before.status`: `passed` or `failed`, the test result before your work.
+- `<package>-thresholds-before.status`: present (`failed`) when the tests pass but the changed code is below a coverage threshold in the project's config. This is not a failing test: tests for the changed code fix it.
 - `<package>-tests-before.log`: the test output before your work.
 - `<package>-coverage-before.json`: the coverage summary before your work.
 
