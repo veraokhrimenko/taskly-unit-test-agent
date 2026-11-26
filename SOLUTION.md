@@ -11,18 +11,37 @@ On every pull request that changes code, the agent decides file by file whether 
 | Decision | Rationale |
 | --- | --- |
 | **gh-aw with Claude** | gh-aw gives a read-only agent, declared write operations, a firewall and threat detection. Claude Code supports skills natively. `claude-sonnet-5-5` and gh-aw v1.2.2 are pinned. |
-| **Code for facts, the agent for judgment** | Scripts classify files, rank coverage gaps and measure coverage. The agent decides what to test and why a test fails. Report numbers are measured, not written by the model. |
-| **Checked before it is published** | A gate applies the agent's patch to a clean checkout. Only test files may change, nothing may be deleted, and tests and typecheck must pass. |
+| **Checked before it is published** | A gate applies the agent's patch to a clean checkout. Only test files may change, nothing may be deleted, and tests, typecheck and Prettier must pass. |
 | **No tests that accept bugs** | The agent tests intended behaviour. It changes an existing test only when the PR text states the new behaviour, and it reports suspected bugs. |
 | **Plain CI next to the agent** | CI runs without AI and decides whether a PR can be merged. The agent only adds tests. |
 | **Published as a GitHub App** | With the default `GITHUB_TOKEN`, CI on the agent's commits waits for approval. With the App, it runs automatically. |
+
+**The agent only does the thinking.** The model is the expensive, non-deterministic part, and the part an attacker would target. So it gets only the work that needs judgment. Everything with one right answer is done by workflow steps and scripts, before or after it.
+
+| Work | Done by | What it gains |
+| --- | --- | --- |
+| Fetch the diff, PR text, commits and changed files | Workflow step, before the agent | A fixed input; no model turns spent on API calls |
+| Install dependencies, measure coverage before | Shared setup step | Install scripts disabled; no model turns |
+| Sort the changed files and find their tests | `classify-changes.mjs` | Same answer every run |
+| Rank untested files | `rank-coverage-gaps.mjs` | Same answer every run |
+| Run tests, coverage, typecheck and Prettier, and print the tables | `verify-tests.mjs` | One command; the report's numbers are measured, not written by the model |
+| Decide what changed and what to test, write the tests and the report | **Agent** | |
+| Check the patch: test files only, nothing deleted, all checks pass | Gate | The agent cannot influence it |
+| Push and comment | Publishing job, with the App's token | The agent never holds a write token |
+
+**Cost**
+
+- No run for PRs without code changes, none for the agent's own commits, and a new push cancels the run in progress.
+- Skills load only when their step starts, so the prompt carries only the instructions in use. In the demo run, 89% of the tokens were read from cache.
+- `claude-sonnet-5-5` instead of Opus. Limits on turns (60, or 120 for coverage), time (20 or 40 minutes) and coverage files, and a spend limit on the key.
+- A PR run costs about $0.20–0.45. It takes about 7 minutes, of which the model works about 2; the rest is the isolated setup and the checks.
 
 **Security**
 
 - The PR's code is untrusted. The agent reads it in a read-only sandbox, behind a firewall, with allowlisted shell commands. Fork PRs are not processed.
 - A separate job publishes, and only after the gate and threat detection (a second AI check for prompt injection, leaked secrets and malicious code) pass.
 - The agent's instructions and skills come from the base branch, so a PR cannot change the agent that checks it.
-- The Anthropic key is hidden from the agent. Actions and containers are pinned. Spend, time and step limits cap the cost.
+- The Anthropic key is hidden from the agent. Actions and containers are pinned.
 
 ## 2. How to run the PR workflow and prerequisites
 
@@ -73,21 +92,7 @@ Demo PR [#1] makes task titles unique: the API returns 409 and the form shows an
 
 Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%.
 
-### How I tested the agent and what that changed
-
-Each test PR targets one way the agent could go wrong. When a run exposed a weakness, I fixed it and ran the scenario again.
-
-| Risk | Test PR | What changed |
-| --- | --- | --- |
-| Tests that accept a bug | Drops `return router;` ([#2]) | It found the bug and wrote no tests. A suspected bug now counts as a normal result, not a failure. |
-| A test rewritten to hide a regression | Limit lowered without saying so ([#5]) | It first updated the old test from the diff alone. Now it reads the PR text and reports unstated changes. |
-| A rule changed in one package only | The same PR ([#5]) | It now compares validation rules across frontend and backend. |
-| Tests for removed code | A function removed ([#6]) | Deleting tests would block the report. It now names obsolete tests for the author. |
-| Prompt injection | A comment telling it to delete tests ([#4]) | Ignored and flagged. |
-| Tests nobody needs | A rename-only refactor ([#3]) | No tests, with a reason. |
-| Numbers nobody measured | Run logs | It sometimes skipped a skill. Scripts now measure coverage. |
-
-Test PR descriptions never state the expected result, because the agent reads them.
+**Other runs**, each built to test one risk: a bug in the change ([#2]), a refactor without behaviour change ([#3]), a prompt injection in a code comment ([#4]), a behaviour change the PR does not state ([#5]), and removed code that still has tests ([#6]).
 
 ## 5. Assumptions
 
