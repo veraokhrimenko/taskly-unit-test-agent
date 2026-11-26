@@ -16,16 +16,17 @@ function read(file) {
   return existsSync(path) ? readFileSync(path, 'utf8') : null;
 }
 
-// Files the coverage run instrumented, relative to their package, for example src/lib/http.ts.
+// Coverage summaries, parsed once, and the files each coverage run instrumented,
+// relative to their package, for example src/lib/http.ts.
+const summaries = {};
 const covered = {};
 for (const pkg of packages) {
   const summary = read(`${pkg}-coverage-before.json`);
+  summaries[pkg] = summary ? JSON.parse(summary) : null;
   covered[pkg] = new Set(
-    summary
-      ? Object.keys(JSON.parse(summary))
-          .filter((key) => key !== 'total')
-          .map((key) => key.slice(key.lastIndexOf(`/${pkg}/`) + pkg.length + 2))
-      : [],
+    Object.keys(summaries[pkg] ?? {})
+      .filter((key) => key !== 'total')
+      .map((key) => key.slice(key.lastIndexOf(`/${pkg}/`) + pkg.length + 2)),
   );
 }
 
@@ -51,9 +52,8 @@ function testFileFor(pkg, path) {
 }
 
 function coverageOf(pkg, path) {
-  const summary = read(`${pkg}-coverage-before.json`);
-  if (!summary) return 'not measured';
-  const entry = Object.entries(JSON.parse(summary)).find(([key]) => key.endsWith(`/${path}`));
+  if (!summaries[pkg]) return 'not measured';
+  const entry = Object.entries(summaries[pkg]).find(([key]) => key.endsWith(`/${path}`));
   return entry ? `${entry[1].lines.pct}% / ${entry[1].branches.pct}%` : 'not measured';
 }
 

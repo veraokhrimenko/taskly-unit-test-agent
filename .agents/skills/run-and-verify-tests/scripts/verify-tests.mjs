@@ -8,7 +8,7 @@
 //     --input <dir> [--source <file,...>] [test files...]
 // Paths are relative to the repository root. Exit code 0 when every check passed.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -44,6 +44,9 @@ function run(name, args) {
 }
 
 // 1. Whole suite with coverage. The JSON report gives exact counts and failing test names.
+// Remove the summary of an earlier run first, so a crashed run cannot report old numbers.
+const coverageFile = join(pkg, 'coverage', 'coverage-summary.json');
+rmSync(coverageFile, { force: true });
 const resultsFile = join(work, 'results.json');
 const suite = run('tests', [
   'run', 'test:coverage', '--prefix', pkg, '--',
@@ -67,7 +70,7 @@ function summary(path) {
   return path && existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
 }
 const before = summary(input && join(input, `${pkg}-coverage-before.json`));
-const after = summary(join(pkg, 'coverage', 'coverage-summary.json'));
+const after = summary(coverageFile);
 function pct(data, metric) {
   return data ? `${data[metric].pct}%` : 'not measured';
 }
