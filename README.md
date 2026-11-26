@@ -1,5 +1,7 @@
 # Taskly App Node
 
+> This repository adds an AI agent that writes and checks unit tests for pull requests. [SOLUTION.md](SOLUTION.md) explains how it works and how to run it, with an example run.
+
 ## Setup
 
 ```sh
