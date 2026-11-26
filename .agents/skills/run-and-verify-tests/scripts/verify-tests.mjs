@@ -147,7 +147,9 @@ for (const line of (git(['diff', '--name-status', '--no-renames', start]) ?? '')
   if (status === 'D') problems.push(`\`${file}\` was deleted`);
   else if (!allowed.test(file)) problems.push(`\`${file}\` is not a test file and may not change`);
 }
-for (const file of (git(['ls-files', '--others', '--exclude-standard']) ?? '').split('\n').filter(Boolean)) {
+// New files count only inside the two packages: the workflow itself leaves folders such as
+// .claude/ in the checkout.
+for (const file of (git(['ls-files', '--others', '--exclude-standard', '--', 'backend', 'frontend']) ?? '').split('\n').filter(Boolean)) {
   if (!allowed.test(file)) problems.push(`\`${file}\` is not a test file and may not be added`);
 }
 console.log(`\n**Patch rules:** ${problems.length ? 'failed. The gate will reject the patch:' : 'passed'}`);
