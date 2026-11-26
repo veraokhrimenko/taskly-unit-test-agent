@@ -31,7 +31,7 @@ On every pull request that changes code, the agent decides file by file whether 
 
 **Cost**
 
-- No run for PRs without code changes, none for the agent's own commits, and a new push cancels the run in progress.
+- No run for PRs without code changes, none for the agent's own commits, and a new push by the author cancels the run in progress.
 - Skills load only when their step starts, so the prompt carries only the instructions in use. In the demo run, 89% of the tokens were read from cache.
 - `claude-sonnet-5-5` instead of Opus. Limits on turns (60, or 120 for coverage), time (20 or 40 minutes) and coverage files, and a spend limit on the key.
 - A PR run costs about $0.20–0.45. It takes about 7 minutes, of which the model works about 2; the rest is the isolated setup and the checks.
@@ -42,6 +42,10 @@ On every pull request that changes code, the agent decides file by file whether 
 - A separate job publishes, and only after the gate and threat detection (a second AI check for prompt injection, leaked secrets and malicious code) pass.
 - The agent's instructions and skills come from the base branch, so a PR cannot change the agent that checks it.
 - The Anthropic key is hidden from the agent. Actions and containers are pinned.
+
+**Example: removing the agent's GitHub access.** gh-aw gives the agent a read-only GitHub server (MCP) by default. I checked the audit of the demo run: the agent never called it, because its input is prepared before it starts. In a public repository, that server would also let it read comments and issues that anyone can write. So I turned it off. This removes one path for prompt injection, one container from every run, and the server's 27 tools and their instructions from the agent's prompt.
+
+**Example: a race between publishing and the next run.** When the App pushes the tests, GitHub starts a new run for that commit at once. In one test run, that new run cancelled the run that was still posting the report; the report got out seconds before. All runs for a PR shared one queue in which a new run cancels the old one. Now only pushes by people share that queue, so a new push still stops outdated work, while a push by the App gets its own queue and cancels nothing.
 
 ## 2. How to run the PR workflow and prerequisites
 
@@ -116,6 +120,7 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 - Rulesets and CODEOWNERS for `main` and `.github/**`.
 - An evaluation suite built from the test PRs, to catch regressions when prompts change.
 - Mutation testing and property-based tests to measure test strength.
+- Give the agent more context about intent, such as linked issues and review comments from people with write access, prepared as input like the PR text, instead of open GitHub access.
 
 [#1]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/1
 [#2]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/2

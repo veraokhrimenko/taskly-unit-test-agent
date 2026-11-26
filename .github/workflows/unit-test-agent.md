@@ -15,6 +15,11 @@ engine:
   id: claude
   model: claude-sonnet-5-5
 strict: true
+# Pushes by people share one group, so a new push cancels the run for the previous one.
+# Each push by a bot gets its own group, so it never cancels a run that is still publishing.
+concurrency:
+  group: "gh-aw-${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ endsWith(github.actor, '[bot]') && github.run_id || 'author' }}"
+  cancel-in-progress: true
 timeout-minutes: 20
 max-turns: 60
 
