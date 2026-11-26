@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createSchema, updateSchema, idSchema, todoSchema } from '../src/features/todos/validators.ts';
+import { createSchema, updateSchema, idSchema, todoSchema, isShortTitle } from '../src/features/todos/validators.ts';
 import { todo } from './fixture.ts';
 
 describe('todo validation', () => {
@@ -36,5 +36,11 @@ describe('todo validation', () => {
     expect(idSchema.parse('12')).toBe(12);
     expect(todoSchema.parse(todo)).toEqual(todo);
     expect(todoSchema.safeParse({ ...todo, created_at: 'yesterday' }).success).toBe(false);
+  });
+  it.each([
+    ['', true], ['Task', true], ['x'.repeat(20), true], ['x'.repeat(21), false],
+    ['  ' + 'x'.repeat(20) + '  ', true], ['  ' + 'x'.repeat(21) + '  ', false], ['     ', true],
+  ])('isShortTitle(%j) is %s', (title, expected) => {
+    expect(isShortTitle(title)).toBe(expected);
   });
 });

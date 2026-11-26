@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { formatDate, isOverdue, selectTodos, validateTodo } from './todos'
+import {
+  countActive,
+  formatDate,
+  isOverdue,
+  selectTodos,
+  validateTodo,
+} from './todos'
 import type { Todo } from '../types'
 
 const base: Todo = {
@@ -163,5 +169,24 @@ describe('isOverdue', () => {
 describe('formatDate', () => {
   it('formats an ISO date as day, short month and year', () => {
     expect(formatDate('2026-03-05')).toBe('5 Mar 2026')
+  })
+})
+
+describe('countActive', () => {
+  it('counts only tasks that are not completed', () => {
+    const todos = [
+      { ...base, id: 1 },
+      { ...base, id: 2, completed: true },
+      { ...base, id: 3 },
+    ]
+    expect(countActive(todos)).toBe(2)
+  })
+
+  it('returns 0 for an empty list', () => {
+    expect(countActive([])).toBe(0)
+  })
+
+  it('returns 0 when every task is completed', () => {
+    expect(countActive([{ ...base, completed: true }])).toBe(0)
   })
 })
