@@ -4,7 +4,7 @@ An AI agent that writes unit tests for Taskly (React frontend, Express and Prism
 
 When a pull request that changes code is opened, the agent decides file by file whether tests are needed, writes them, runs them and posts a report. A gate checks its tests before they are pushed, and a workflow without AI posts the gate's own numbers next to the agent's report. A second workflow, started by hand, opens a draft PR with tests for untested code.
 
-**See the result in one minute:** demo PR [#31], with the [independent check] and the [agent's report].
+**See the result in one minute:** demo PR [#50], with the [independent check] and the [agent's report].
 
 ## 1. Main technical decisions and rationale
 
@@ -66,15 +66,15 @@ The workflow imports the agent and lists its skills; the agent loads each skill 
 
 ## 4. Example run: decisions, skills used and test results
 
-Demo PR [#31] adds a feature without tests: task titles must be unique, the API returns 409 and the form shows an error. Run: [demo run].
+Demo PR [#50] adds a feature without tests: task titles must be unique, the API returns 409 and the form shows an error. Run: [demo run].
 
 - **Decisions**: tests for the router, repository, `validateTodo`, `TodoForm` and `TodoEditor`. None for `TodosPage.tsx` (it only passes a prop), types and `openapi.json`. CI was red on the feature commit, because existing tests did not know the new method and prop. The PR states the change, so the agent updated them and kept every expectation.
 - **Skills used**: `analyze-pr-changes`, `write-backend-tests`, `write-frontend-tests`, `run-and-verify-tests`, `report-results`.
-- **Results, measured by the gate**: backend 81/81 and frontend 64/64 tests pass, no existing test removed, typecheck and Prettier pass. Line coverage: backend 57% → 60%, frontend 68% → 73%.
-- **Do the new tests detect the change?** Of 18 new tests, 9 fail on an assertion on the old code, 4 need code that the PR adds, and 5 also pass.
-- **After the agent**: the App pushed one commit, CI passed on it, and the agent did not start again. 8 minutes in total.
+- **Results, measured by the gate**: backend 80/80 and frontend 64/64 tests pass, no existing test removed, typecheck and Prettier pass. Line coverage: backend 57% → 60%, frontend 68% → 73%.
+- **Do the new tests detect the change?** Of 17 new tests, 12 run and fail on the code from before the PR, and 5 also pass. The agent saw this before it committed, and its report says why it kept those: they guard behaviour that must stay the same.
+- **After the agent**: the App pushed one commit, CI passed on it, and the agent did not start again. 9 minutes and about $0.40 in total.
 
-Other runs, each built to test one risk: a bug in the change ([#37]), a refactor ([#38]), a prompt injection in a code comment ([#39]), a behaviour change the PR does not state ([#40]), removed code that still has tests ([#41]), and a coverage run ([#42]). Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%.
+Other runs, each built to test one risk: a bug in the change ([#51]), a refactor ([#52]), a prompt injection in a code comment ([#53]), a behaviour change the PR does not state ([#54]), removed code that still has tests ([#55]), and a coverage run ([#56]). Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%.
 
 ## 5. Assumptions
 
@@ -88,6 +88,7 @@ Other runs, each built to test one risk: a bug in the change ([#37]), a refactor
 - A test runs in the same process that writes the report the gate reads, so a malicious test could forge the counts. The containers limit what such a test can reach, not what it reports.
 - When a PR removes code, the agent names the obsolete tests and the author removes them. The agent's new tests are not pushed while the suite is red.
 - A PR uses the workflow as it was when its branch was last updated with `main`.
+- The tests cover the scripts, not the way gh-aw calls them (its job order, patch format and folders). A full run on a test PR after each change has been the check for that.
 - Each scenario was run a few times, not enough to measure variance. The injection test is one obvious comment, not a determined attack.
 - The scripts map a source file to its test by file name and know Taskly's folders.
 - Not tested: fork PRs, a real attack on threat detection, very large diffs.
@@ -95,18 +96,19 @@ Other runs, each built to test one risk: a bug in the change ([#37]), a refactor
 ## 7. What I would extend or change for production
 
 - An evaluation suite built from the test PRs and run many times, to measure variance and catch regressions when prompts change.
+- A canary: one fixed test PR that runs the whole pipeline automatically after each change to `.github/` or `.agents/` and after each gh-aw upgrade.
 - Mutation testing, to measure test strength instead of coverage.
 - Prisma's engine cached so that no project code runs with network access, and a second maintainer, so that the owner's review needs no bypass.
 - Keyless authentication over OIDC instead of a stored API key.
 - Let the agent delete an obsolete test when code can prove that it only covers removed code.
 
-[#37]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/37
-[#38]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/38
-[#39]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/39
-[#40]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/40
-[#41]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/41
-[#42]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/42
-[#31]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31
-[independent check]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31#issuecomment-7192057815
-[agent's report]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31#issuecomment-7192041120
-[demo run]: https://github.com/veraokhrimenko/taskly-unit-test-agent/actions/runs/45818745058
+[#51]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/51
+[#52]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/52
+[#53]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/53
+[#54]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/54
+[#55]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/55
+[#56]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/56
+[#50]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/50
+[independent check]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/50#issuecomment-7195023752
+[agent's report]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/50#issuecomment-7194990882
+[demo run]: https://github.com/veraokhrimenko/taskly-unit-test-agent/actions/runs/45838919789
