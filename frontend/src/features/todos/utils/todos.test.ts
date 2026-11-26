@@ -105,6 +105,31 @@ describe('validateTodo', () => {
     })
   })
 
+  it.each([
+    ['same title', 'Plan the sprint'],
+    ['different case', 'PLAN THE SPRINT'],
+    ['surrounding spaces', '  plan the sprint  '],
+  ])('rejects a duplicate title (%s)', (_name, title) => {
+    expect(
+      validateTodo({ ...valid, title }, ['Other', ' Plan the Sprint ']),
+    ).toEqual({
+      title: 'A task with this title already exists.',
+    })
+  })
+
+  it('accepts a title that differs from the other titles', () => {
+    expect(
+      validateTodo({ ...valid, title: 'Plan' }, ['Plan the sprint']),
+    ).toEqual({})
+    expect(validateTodo({ ...valid, title: 'Plan' })).toEqual({})
+  })
+
+  it('reports an empty title before a duplicate', () => {
+    expect(validateTodo({ ...valid, title: ' ' }, [''])).toEqual({
+      title: 'Enter a task title.',
+    })
+  })
+
   it('accepts a 2000 character description and rejects 2001', () => {
     expect(validateTodo({ ...valid, description: 'x'.repeat(2000) })).toEqual(
       {},

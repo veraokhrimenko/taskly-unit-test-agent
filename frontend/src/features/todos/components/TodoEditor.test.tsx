@@ -17,10 +17,60 @@ vi.mock('../hooks/useUpdateTodoMutation', () => ({
 vi.mock('./TodoForm', () => ({
   TodoForm: ({
     onSubmit,
+    otherTitles,
   }: {
     onSubmit: (input: TodoInput) => Promise<void>
-  }) => <button onClick={() => void onSubmit(todoFixture)}>Submit form</button>,
+    otherTitles: string[]
+  }) => (
+    <>
+      <button onClick={() => void onSubmit(todoFixture)}>Submit form</button>
+      <p data-testid="other-titles">{otherTitles.join('|')}</p>
+    </>
+  ),
 }))
+
+function mockMutations() {
+  const idle = { isPending: false, error: null, mutateAsync: vi.fn() }
+  vi.mocked(useCreateTodoMutation).mockReturnValue(
+    idle as unknown as ReturnType<typeof useCreateTodoMutation>,
+  )
+  vi.mocked(useUpdateTodoMutation).mockReturnValue(
+    idle as unknown as ReturnType<typeof useUpdateTodoMutation>,
+  )
+}
+
+const todos = [
+  { ...todoFixture, id: 1, title: 'First' },
+  { ...todoFixture, id: 2, title: 'Second' },
+]
+
+it('passes the titles of all tasks when creating', () => {
+  mockMutations()
+  render(
+    <TodoEditor
+      todo="new"
+      todos={todos}
+      busy={false}
+      onClose={vi.fn()}
+      onSaved={vi.fn()}
+    />,
+  )
+  expect(screen.getByTestId('other-titles')).toHaveTextContent('First|Second')
+})
+
+it('excludes the edited task own title when editing', () => {
+  mockMutations()
+  render(
+    <TodoEditor
+      todo={todos[0]}
+      todos={todos}
+      busy={false}
+      onClose={vi.fn()}
+      onSaved={vi.fn()}
+    />,
+  )
+  expect(screen.getByTestId('other-titles')).toHaveTextContent(/^Second$/)
+})
 
 it('creates a new task and reports a successful save', async () => {
   const user = userEvent.setup()
@@ -38,7 +88,13 @@ it('creates a new task and reports a successful save', async () => {
   } as unknown as ReturnType<typeof useUpdateTodoMutation>)
   const onSaved = vi.fn()
   render(
-    <TodoEditor todo="new" busy={false} onClose={vi.fn()} onSaved={onSaved} />,
+    <TodoEditor
+      todo="new"
+      todos={[]}
+      busy={false}
+      onClose={vi.fn()}
+      onSaved={onSaved}
+    />,
   )
   expect(screen.getByRole('dialog', { name: 'New task' })).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Submit form' }))

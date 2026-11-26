@@ -76,6 +76,26 @@ it('deletes tasks and handles missing tasks', async () => {
   expect(await repository.delete(1)).toBe(false);
 });
 
+it.each([[true, { id: 1 }], [false, null]])('reports whether a title exists (%s)', async (expected, found) => {
+  const { database, repository } = setup();
+  const findFirst = vi.spyOn(database.todo, 'findFirst').mockResolvedValue(found as never);
+  expect(await repository.titleExists('  Plan the sprint ')).toBe(expected);
+  expect(findFirst).toHaveBeenCalledWith({
+    where: { title: { equals: 'Plan the sprint', mode: 'insensitive' } },
+    select: { id: true },
+  });
+});
+
+it('excludes the task itself when checking a title', async () => {
+  const { database, repository } = setup();
+  const findFirst = vi.spyOn(database.todo, 'findFirst').mockResolvedValue(null);
+  expect(await repository.titleExists('Task', 7)).toBe(false);
+  expect(findFirst).toHaveBeenCalledWith({
+    where: { title: { equals: 'Task', mode: 'insensitive' }, NOT: { id: 7 } },
+    select: { id: true },
+  });
+});
+
 it('propagates database errors', async () => {
   const { database, repository } = setup();
   vi.spyOn(database.todo, 'findMany').mockRejectedValue(new Error('Database unavailable'));

@@ -5,7 +5,7 @@ import { createTodosRouter } from '../src/features/todos/router.ts';
 import { todo } from './fixture.ts';
 
 function setup() {
-  const repository = { list: vi.fn().mockResolvedValue([todo]), create: vi.fn().mockResolvedValue(todo), get: vi.fn(), update: vi.fn(), delete: vi.fn() };
+  const repository = { list: vi.fn().mockResolvedValue([todo]), create: vi.fn().mockResolvedValue(todo), get: vi.fn(), update: vi.fn(), delete: vi.fn(), titleExists: vi.fn().mockResolvedValue(false) };
   const app = express();
   app.use(express.json());
   app.use('/api/todos', createTodosRouter(repository));
@@ -91,3 +91,34 @@ it.each([{ title: '  ' }, { title: 'x'.repeat(121) }, { title: 'Task', priority:
     expect(repository.create).not.toHaveBeenCalled();
   },
 );
+const duplicate = { detail: 'A task with this title already exists.' };
+it('returns 409 when creating a task with an existing title', async () => {
+  const { app, repository } = setup();
+  repository.titleExists.mockResolvedValue(true);
+  const response = await request(app).post('/api/todos').send({ title: '  Plan the sprint ' });
+  expect(response.status).toBe(409);
+  expect(response.body).toEqual(duplicate);
+  expect(repository.titleExists).toHaveBeenCalledWith('Plan the sprint');
+  expect(repository.create).not.toHaveBeenCalled();
+});
+it('returns 409 when renaming a task to the title of another task', async () => {
+  const { app, repository } = setup();
+  repository.titleExists.mockResolvedValue(true);
+  const response = await request(app).patch('/api/todos/4').send({ title: 'Taken' });
+  expect(response.status).toBe(409);
+  expect(response.body).toEqual(duplicate);
+  expect(repository.titleExists).toHaveBeenCalledWith('Taken', 4);
+  expect(repository.update).not.toHaveBeenCalled();
+});
+it('does not check titles when an update leaves the title unchanged', async () => {
+  const { app, repository } = setup();
+  repository.update.mockResolvedValue(todo);
+  const response = await request(app).patch('/api/todos/1').send({ description: 'New text' });
+  expect(response.status).toBe(200);
+  expect(repository.titleExists).not.toHaveBeenCalled();
+});
+it('returns 422 before checking titles for invalid create input', async () => {
+  const { app, repository } = setup();
+  expect((await request(app).post('/api/todos').send({ title: ' ' })).status).toBe(422);
+  expect(repository.titleExists).not.toHaveBeenCalled();
+});
