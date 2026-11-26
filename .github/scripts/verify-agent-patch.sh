@@ -11,6 +11,7 @@
 #
 # Usage:
 #   verify-agent-patch.sh baseline <package>      install, measure tests and coverage before the agent
+#   verify-agent-patch.sh guard                   remove or refuse agent instruction files (part of baseline)
 #   verify-agent-patch.sh apply <patch-file>      apply the agent patch, check what it changes
 #   verify-agent-patch.sh test <package>          install, check that no test disappeared, run
 #                                                 tests with coverage, typecheck and Prettier
@@ -92,22 +93,28 @@ export_old_sources() {
   done || true
 }
 
-# Claude Code reads instruction files such as CLAUDE.md from the folders it works in. The agent's
-# instructions come from the base branch, so such a file from the pull request, or one that a
-# test created during the baseline, must not reach the agent.
+# Claude Code reads instruction files such as CLAUDE.md, and .claude/ folders, from the folders
+# it works in. The agent's instructions come from the base branch, so such a file from the pull
+# request, or one that a test created during the baseline, must not reach the agent.
+# Files and symbolic links are both checked. A tracked file is compared with the point where the
+# pull request's branch left the base branch, so a later change on the base branch is not blamed
+# on the pull request. Without a pull request (the coverage run) tracked files are the
+# repository's own.
 guard_instruction_files() {
-  local file
-  while IFS= read -r file; do
-    file="${file#./}"
-    if git ls-files --error-unmatch -- "$file" > /dev/null 2>&1; then
-      if [ -n "${PR_BASE:-}" ] && git diff --quiet "$PR_BASE" -- "$file" 2> /dev/null; then continue; fi
-      echo "::error::The pull request adds or changes the agent instruction file $file. The agent does not run on such a pull request."
+  local path merge_base=""
+  if [ -n "${PR_BASE:-}" ]; then merge_base=$(git merge-base "$PR_BASE" HEAD 2> /dev/null || echo "$PR_BASE"); fi
+  while IFS= read -r path; do
+    path="${path#./}"
+    if [ -n "$(git ls-files -- "$path" | head -1)" ]; then
+      if [ -z "$merge_base" ] || git diff --quiet "$merge_base" -- "$path" 2> /dev/null; then continue; fi
+      echo "::error::The pull request adds or changes agent instructions in $path. The agent does not run on such a pull request."
       exit 1
     fi
-    echo "::warning::Removed the instruction file $file, which is not part of the repository."
-    rm -f "$file"
+    echo "::warning::Removed $path, agent instructions that are not part of the repository."
+    rm -rf "$path"
   done < <(find . \( -name node_modules -o -name .git -o -path ./.github -o -path ./.agents -o -path ./.claude \) -prune \
-    -o -type f \( -name CLAUDE.md -o -name CLAUDE.local.md -o -name AGENTS.md \) -print)
+    -o \( \( -type f -o -type l \) \( -name CLAUDE.md -o -name CLAUDE.local.md -o -name AGENTS.md \) -print \) \
+    -o \( -name .claude -prune -print \))
 }
 
 baseline() {
@@ -169,6 +176,8 @@ apply_patch() {
   # check is a failure of the gate.
   local problems code
   problems=$(node "$here/patch-rules.mjs" "$base") && code=0 || code=$?
+  # Success must be said out loud: a check that ran nothing also exits with 0.
+  if [ "$code" -eq 0 ] && [ "$problems" != "patch rules: passed" ]; then code=1; fi
   if [ "$code" -ne 0 ]; then
     if [ "$code" -eq 3 ]; then echo "::error::Agent patch breaks the patch rules:"; else echo "::error::The patch rules could not be checked (exit $code)"; fi
     printf '%s\n' "$problems"
@@ -319,13 +328,14 @@ old_code_check() {
 }
 
 usage() {
-  echo "usage: $0 baseline <package> | apply <patch> | test <package> | old-code <package> <pr-base>" >&2
+  echo "usage: $0 baseline <package> | guard | apply <patch> | test <package> | old-code <package> <pr-base>" >&2
   exit 2
 }
 
 command="${1:-}"
 case "$command" in
   apply) shift; apply_patch "$@" ;;
+  guard) guard_instruction_files ;;
   baseline | test | old-code)
     case "${2:-}" in backend | frontend) ;; *) usage ;; esac
     case "$command" in

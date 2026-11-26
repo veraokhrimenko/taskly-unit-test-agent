@@ -1,7 +1,7 @@
 // Tests for patch-rules.mjs. Run: node --test .agents/skills/*/scripts/*.test.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -36,6 +36,7 @@ test('accepts a new test file and a new test in an existing file', () => {
   writeFileSync(join(dir, 'backend/tests/a.test.ts'), `${original}it('more', () => { expect(3).toBe(3); });\n`);
   const result = check();
   assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.equal(result.stdout.trim(), 'patch rules: passed');
 });
 
 test('exits with 3 and names each broken rule', () => {
@@ -73,4 +74,13 @@ test('fails with another exit code when the check itself cannot run', () => {
   assert.notEqual(result.status, 0);
   assert.notEqual(result.status, 3);
   assert.equal(check().status, 0);
+});
+
+test('still runs as a command when it is started through a linked folder', () => {
+  const { dir } = repo();
+  const link = `${dir}-link`;
+  symlinkSync(new URL('.', import.meta.url).pathname, link);
+  writeFileSync(join(dir, 'backend/tests/a.test.ts'), original.replace("it('", "it.skip('"));
+  const result = spawnSync(process.execPath, [join(link, 'patch-rules.mjs'), 'HEAD'], { cwd: dir, encoding: 'utf8' });
+  assert.equal(result.status, 3, result.stdout + result.stderr);
 });
