@@ -88,6 +88,7 @@ export function TodosPage() {
       {editor && (
         <TodoEditor
           todo={editor}
+          todos={todos}
           busy={busy}
           onClose={() => setEditor(null)}
           onSaved={(notice) => {

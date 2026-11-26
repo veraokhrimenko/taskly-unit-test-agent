@@ -6,11 +6,13 @@ import { TodoForm } from './TodoForm'
 
 export function TodoEditor({
   todo,
+  todos,
   busy,
   onClose,
   onSaved,
 }: {
   todo: Todo | 'new'
+  todos: Todo[]
   busy: boolean
   onClose: () => void
   onSaved: (message: string) => void
@@ -19,6 +21,9 @@ export function TodoEditor({
   const updateTodo = useUpdateTodoMutation()
   const mutation = todo === 'new' ? createTodo : updateTodo
   const pending = busy || mutation.isPending
+  const otherTitles = todos
+    .filter((other) => todo === 'new' || other.id !== todo.id)
+    .map((other) => other.title)
 
   async function save(input: TodoInput) {
     if (pending) return
@@ -42,6 +47,7 @@ export function TodoEditor({
         initial={todo === 'new' ? undefined : todo}
         busy={pending}
         error={mutation.error?.message ?? null}
+        otherTitles={otherTitles}
         onSubmit={save}
         onCancel={onClose}
       />

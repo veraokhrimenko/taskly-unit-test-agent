@@ -44,6 +44,17 @@ export class TodoRepository implements TodoStore {
     return rows.length ? fromModel(rows[0]) : null;
   }
 
+  async titleExists(title: string, exceptId?: number): Promise<boolean> {
+    const record = await this.database.todo.findFirst({
+      where: {
+        title: { equals: title.trim(), mode: 'insensitive' },
+        ...(exceptId === undefined ? {} : { NOT: { id: exceptId } }),
+      },
+      select: { id: true },
+    });
+    return record !== null;
+  }
+
   async delete(id: number): Promise<boolean> {
     const { count } = await this.database.todo.deleteMany({ where: { id } });
     return count > 0;

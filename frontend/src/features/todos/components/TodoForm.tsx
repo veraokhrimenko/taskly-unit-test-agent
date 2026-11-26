@@ -17,12 +17,14 @@ export function TodoForm({
   onCancel,
   busy,
   error,
+  otherTitles = [],
 }: {
   initial?: TodoInput
   onSubmit: (todo: TodoInput) => Promise<void>
   onCancel: () => void
   busy: boolean
   error: string | null
+  otherTitles?: string[]
 }) {
   const [values, setValues] = useState<TodoInput>({ ...initial })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -30,7 +32,7 @@ export function TodoForm({
     setValues((current) => ({ ...current, [key]: value }))
   function submit(event: FormEvent) {
     event.preventDefault()
-    const nextErrors = validateTodo(values)
+    const nextErrors = validateTodo(values, otherTitles)
     setErrors(nextErrors)
     if (!Object.keys(nextErrors).length)
       void onSubmit({
