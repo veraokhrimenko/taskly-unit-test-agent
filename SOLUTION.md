@@ -68,7 +68,7 @@ On every pull request that changes code, the agent decides file by file whether 
 | --- | --- |
 | Custom agent | `.github/agents/unit-test-engineer.md` |
 | Skills | `.agents/skills/<name>/SKILL.md`, with scripts in `scripts/` |
-| Workflows | `.github/workflows/unit-test-agent.md`, `coverage-agent.md`, `shared/install-and-measure.md` |
+| Workflows | `.github/workflows/unit-test-agent.md`, `coverage-agent.md`, and the shared parts in `shared/agent-common.md` and `shared/install-and-measure.md` |
 | Gate | `.github/scripts/verify-agent-patch.sh` |
 
 ```mermaid
