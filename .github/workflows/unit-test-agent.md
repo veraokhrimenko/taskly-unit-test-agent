@@ -21,6 +21,7 @@ max-turns: 60
 imports:
   - .github/agents/unit-test-engineer.md
   - shared/install-and-measure.md
+  - shared/agent-common.md
 
 skills:
   - .agents/skills/analyze-pr-changes
@@ -49,29 +50,10 @@ steps:
       cut -f2 "$out/changed-files.tsv" | cut -d/ -f1 | grep -xE 'backend|frontend' | sort -u > "$out/packages.txt" || true
 
 tools:
-  edit:
   bash:
-    - "git status"
-    - "git diff:*"
-    - "git log:*"
-    - "git add:*"
-    - "git commit:*"
-    - "npm test:*"
-    - "npm run test:coverage:*"
-    - "npm run typecheck:*"
-    - "npm exec --prefix frontend -- prettier --write:*"
     - "node .agents/skills/analyze-pr-changes/scripts/classify-changes.mjs:*"
-    - "node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
-
-network:
-  allowed:
-    - defaults
 
 safe-outputs:
-  # Publish as a GitHub App instead of GITHUB_TOKEN, so CI runs on the agent's commits without manual approval.
-  github-app:
-    app-id: ${{ vars.TEST_AGENT_APP_ID }}
-    private-key: ${{ secrets.TEST_AGENT_APP_PRIVATE_KEY }}
   threat-detection:
     continue-on-error: false
     post-steps:

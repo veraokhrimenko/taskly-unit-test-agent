@@ -26,6 +26,7 @@ max-turns: 120
 imports:
   - .github/agents/unit-test-engineer.md
   - shared/install-and-measure.md
+  - shared/agent-common.md
 
 skills:
   - .agents/skills/find-coverage-gaps
@@ -54,29 +55,10 @@ steps:
       esac
 
 tools:
-  edit:
   bash:
-    - "git status"
-    - "git diff:*"
-    - "git log:*"
-    - "git add:*"
-    - "git commit:*"
-    - "npm test:*"
-    - "npm run test:coverage:*"
-    - "npm run typecheck:*"
-    - "npm exec --prefix frontend -- prettier --write:*"
     - "node .agents/skills/find-coverage-gaps/scripts/rank-coverage-gaps.mjs:*"
-    - "node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs:*"
-
-network:
-  allowed:
-    - defaults
 
 safe-outputs:
-  # Publish as a GitHub App instead of GITHUB_TOKEN, so CI runs on the agent's commits without manual approval.
-  github-app:
-    app-id: ${{ vars.TEST_AGENT_APP_ID }}
-    private-key: ${{ secrets.TEST_AGENT_APP_PRIVATE_KEY }}
   threat-detection:
     continue-on-error: false
     post-steps:
