@@ -35,7 +35,7 @@ On every pull request that changes code, the agent decides file by file whether 
 **Running**
 
 - **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent runs when the PR is opened and again on every push to the PR that changes code. Pushes to a branch without a PR do not start it. It comments in about 7 minutes.
-- **Coverage** (optional, started by hand): Actions → Coverage agent → Run workflow. By default it covers both packages and up to 5 files.
+- **Coverage** (optional, started by hand): Actions → Coverage agent → Run workflow. By default it ranks the untested files in both packages and writes tests for the 5 that need them most.
 
 ## 3. Where the custom agent and skills are defined and how they are used
 
