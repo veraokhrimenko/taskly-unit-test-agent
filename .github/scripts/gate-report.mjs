@@ -56,12 +56,15 @@ if (command === 'counts') {
       results.set(`${file.name} > ${[...test.ancestorTitles, test.title].join(' > ')}`, test);
     }
   }
-  const groups = { detects: [], passes: [], needsNewCode: [] };
+  const groups = { detects: [], passes: [], needsNewCode: [], inconclusive: [] };
   for (const name of added) {
     const file = name.slice(0, name.indexOf(' > '));
     const title = name.slice(name.indexOf(' > ') + 3);
     const result = results.get(name);
-    if (!result || brokenFiles.has(file)) groups.needsNewCode.push(title);
+    // The file could not be loaded on the old code: it needs something the pull request adds.
+    if (brokenFiles.has(file)) groups.needsNewCode.push(title);
+    // No result for this test at all (no report, or the test is missing from it): the cause is unknown.
+    else if (!result) groups.inconclusive.push(title);
     else if (result.status === 'passed') groups.passes.push(title);
     else if (result.failureMessages.some((message) => /AssertionError|expected/i.test(message))) groups.detects.push(title);
     else groups.needsNewCode.push(title);
@@ -73,6 +76,9 @@ if (command === 'counts') {
     console.log(`- ✅ ${groups.detects.length} fail on an assertion, so they detect the change`);
     console.log(`- ➖ ${groups.needsNewCode.length} cannot run, because they need code that the pull request adds`);
     console.log(`- ⚠️ ${groups.passes.length} also pass, so they do not depend on the change (expected for a refactor)`);
+    if (groups.inconclusive.length) {
+      console.log(`- ❔ ${groups.inconclusive.length} inconclusive: the run on the old code gave no result for them`);
+    }
     if (groups.passes.length) {
       console.log('\nAlso pass on the old code:\n');
       console.log('```');
