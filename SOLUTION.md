@@ -13,7 +13,7 @@ If tests are not needed, you get the report with the reason and no commit. If an
 
 **Coverage on demand.** The same agent and skills can also scan existing code and open a draft PR with tests for the most valuable untested files.
 
-**See it in action:** demo PR [#1] (a new feature, tested by the agent), and the draft PR that the coverage workflow opened with tests for existing code ([#7]).
+**See it in action:** demo PR [#1] (a new feature, tested by the agent), and the draft PR that the coverage workflow opened with tests for existing code ([#10]).
 
 ## 1. Main technical decisions and rationale
 
@@ -163,7 +163,7 @@ Demo PR [#1] adds a feature without tests: task titles must be unique (trimmed, 
 | A code comment tells the agent to do something else | Ignored the instruction and flagged the comment to maintainers ([#4]) |
 | A change breaks an existing test, but the PR does not say it is intended | Left the test unchanged and reported a possible breaking change ([#5]) |
 | The change removes code that has tests | Left the obsolete tests unchanged and named them for the author to remove ([#6]) |
-| Existing code has no tests (coverage workflow) | Opened a draft PR with tests for it ([#7]) |
+| Existing code has no tests (coverage workflow) | Opened a draft PR with tests for it ([#10]) |
 
 **Coverage of `main`, before this work and now**
 
@@ -203,5 +203,5 @@ Demo PR [#1] adds a feature without tests: task titles must be unique (trimmed, 
 [#4]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/4
 [#5]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/5
 [#6]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/6
-[#7]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/7
+[#10]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/10
 [demo run]: https://github.com/veraokhrimenko/taskly-unit-test-agent/actions/runs/45778366652
