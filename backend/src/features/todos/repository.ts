@@ -4,9 +4,10 @@ import type { Database, TodoStore, TodoCreate, TodoUpdate, Todo } from './types.
 export class TodoRepository implements TodoStore {
   constructor(private readonly database: Pick<Database, 'todo'>) {}
 
+  // Newest tasks first; the ID breaks ties between tasks created in the same millisecond.
   async list(): Promise<Todo[]> {
-    const rows = await this.database.todo.findMany({ orderBy: [{ created_at: 'desc' }, { id: 'desc' }] });
-    return rows.map(fromModel);
+    const records = await this.database.todo.findMany({ orderBy: [{ created_at: 'desc' }, { id: 'desc' }] });
+    return records.map(fromModel);
   }
 
   async get(id: number): Promise<Todo | null> {
