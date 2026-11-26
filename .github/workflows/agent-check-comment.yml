@@ -1,0 +1,66 @@
+# Posts the gate's own results on the pull request, and says so when a run failed.
+# The agent's report is written by the model. This comment is written by the workflow, from
+# numbers that the gate measured, so a reader can compare the two.
+# It runs from the default branch after "Unit test agent" finishes and never checks out code.
+name: Unit test agent check
+
+on:
+  workflow_run:
+    workflows: ["Unit test agent"]
+    types: [completed]
+
+permissions:
+  actions: read
+  pull-requests: write
+
+jobs:
+  comment:
+    name: Comment on the pull request
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Post or update the comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PR" ]; then echo "This run has no pull request."; exit 0; fi
+
+          mkdir gate
+          gh run download "$RUN_ID" --repo "$REPO" --name gate-summary --dir gate 2> /dev/null || true
+          # A successful run without gate results published no tests (or was skipped): nothing to add.
+          if [ ! -f gate/summary.md ] && [ "$CONCLUSION" = success ]; then exit 0; fi
+
+          marker='<!-- unit-test-agent-check -->'
+          {
+            echo "$marker"
+            echo "### Independent check of the agent's tests"
+            echo
+            if [ "$CONCLUSION" = failure ]; then
+              echo "**The run failed, so the agent's tests and report were not published.** See the [run]($RUN_URL)."
+            else
+              echo "Measured by the workflow, not written by the agent. Commit \`${HEAD_SHA:0:7}\`, [run]($RUN_URL)."
+            fi
+            echo
+            if [ -f gate/summary.md ]; then
+              # Test titles come from the agent: stop them from mentioning people, and limit the size.
+              sed 's/@\([A-Za-z0-9]\)/@ \1/g' gate/summary.md | head -c 50000
+            fi
+          } > body.md
+
+          existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"$marker\")) | .id" | tail -1)
+          if [ -n "$existing" ]; then
+            gh api --method PATCH "repos/$REPO/issues/comments/$existing" -F body=@body.md > /dev/null
+          else
+            gh api --method POST "repos/$REPO/issues/$PR/comments" -F body=@body.md > /dev/null
+          fi

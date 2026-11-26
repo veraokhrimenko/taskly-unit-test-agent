@@ -45,7 +45,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run db:generate
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run test:coverage
 
   frontend:
     name: Frontend typecheck and tests
@@ -66,7 +66,7 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run format:check
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run test:coverage
 
   agent-scripts:
     name: Agent skill scripts tests
