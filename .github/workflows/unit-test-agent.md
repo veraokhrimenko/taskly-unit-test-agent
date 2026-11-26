@@ -19,12 +19,13 @@ engine:
   id: claude
   model: claude-sonnet-5-5
 strict: true
-# One run at a time per pull request; a newer request cancels the older run.
+# One run at a time per pull request. A newer request waits: cancelling could stop a run
+# between its push and its report.
 # A run that only exists because some other label was added gets its own group, so it
 # cannot cancel a real run.
 concurrency:
   group: "gh-aw-${{ github.workflow }}-${{ github.event.pull_request.number }}-${{ (github.event.action == 'labeled' && github.event.label.name != 'unit-tests') && github.run_id || 'agent' }}"
-  cancel-in-progress: true
+  cancel-in-progress: false
 timeout-minutes: 20
 max-turns: 60
 
@@ -76,9 +77,16 @@ safe-outputs:
       - name: Apply agent patch and check what it changes
         id: patch
         if: needs.agent.outputs.has_patch == 'true'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
         run: |
+          # The gate's scripts come from the base branch, like the agent's prompt and skills, so
+          # a pull request cannot bring its own gate.
           mkdir -p "$RUNNER_TEMP/gate"
-          cp .github/scripts/verify-agent-patch.sh .github/scripts/gate-report.mjs "$RUNNER_TEMP/gate/"
+          git fetch --no-tags --quiet --depth=1 origin "$BASE_SHA"
+          for file in verify-agent-patch.sh gate-report.mjs; do
+            git show "$BASE_SHA:.github/scripts/$file" > "$RUNNER_TEMP/gate/$file"
+          done
           bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" apply /tmp/gh-aw/aw-*.patch
 
       - name: Verify backend tests

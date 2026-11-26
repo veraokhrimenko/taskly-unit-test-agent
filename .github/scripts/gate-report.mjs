@@ -7,9 +7,15 @@
 //   gate-report.mjs static-removed <after.json> <file>...    the same, from test titles in source files
 //   gate-report.mjs old-code <results.json> <before.json> <after.json>
 //                                                            how each new test behaves on the old code
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const [command, ...args] = process.argv.slice(2);
+
+// Test titles are written by the agent. Keep only harmless characters, so a title cannot add
+// Markdown or HTML to the comment that reports the gate's results.
+function plain(text) {
+  return text.replace(/[^\p{L}\p{N} .,:;!?()'\/+=%-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+}
 
 function json(path) {
   return path && existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null;
@@ -33,13 +39,24 @@ if (command === 'counts') {
   // its source. Titles with placeholders (it.each) cannot be matched and are skipped.
   const after = [...listed(args[0])];
   const gone = [];
-  for (const file of args.slice(1)) {
+  // With --before-out <file>, also write the tests that existed before, so that later steps
+  // do not count every test of the file as new.
+  const beforeOut = args[1] === '--before-out' ? args[2] : null;
+  const files = beforeOut ? args.slice(3) : args.slice(1);
+  const existed = new Set();
+  for (const file of files) {
     const source = readFileSync(file, 'utf8');
     for (const match of source.matchAll(/\b(?:it|test)(?:\.each\([^)]*\))?\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g)) {
       const title = match[2];
       if (/%|\$\{|\$[a-zA-Z]/.test(title)) continue;
-      if (!after.some((name) => name.endsWith(title))) gone.push(title);
+      const match = after.filter((name) => name.endsWith(title));
+      if (!match.length) gone.push(title);
+      for (const name of match) existed.add(name);
     }
+  }
+  if (beforeOut) {
+    const tests = (json(args[0]) ?? []).filter((test) => existed.has(`${test.file} > ${test.name}`));
+    writeFileSync(beforeOut, JSON.stringify(tests));
   }
   for (const title of gone) console.log(title);
   process.exit(gone.length ? 1 : 0);
@@ -66,24 +83,22 @@ if (command === 'counts') {
     // No result for this test at all (no report, or the test is missing from it): the cause is unknown.
     else if (!result) groups.inconclusive.push(title);
     else if (result.status === 'passed') groups.passes.push(title);
-    else if (result.failureMessages.some((message) => /AssertionError|expected/i.test(message))) groups.detects.push(title);
-    else groups.needsNewCode.push(title);
+    // The test ran and failed, whatever the error: it does not hold on the old code.
+    else groups.detects.push(title);
   }
   if (!added.length) {
     console.log('No new tests to check.');
   } else {
     console.log(`Of ${added.length} new tests, on the code from before the pull request:`);
-    console.log(`- ✅ ${groups.detects.length} fail on an assertion, so they detect the change`);
-    console.log(`- ➖ ${groups.needsNewCode.length} cannot run, because they need code that the pull request adds`);
+    console.log(`- ✅ ${groups.detects.length} run and fail, so they detect the change`);
+    console.log(`- ➖ ${groups.needsNewCode.length} cannot be loaded, because their file needs code that the pull request adds`);
     console.log(`- ⚠️ ${groups.passes.length} also pass, so they do not depend on the change (expected for a refactor)`);
     if (groups.inconclusive.length) {
       console.log(`- ❔ ${groups.inconclusive.length} inconclusive: the run on the old code gave no result for them`);
     }
     if (groups.passes.length) {
       console.log('\nAlso pass on the old code:\n');
-      console.log('```');
-      for (const title of groups.passes) console.log(title);
-      console.log('```');
+      for (const title of groups.passes) console.log(`- ${plain(title)}`);
     }
   }
 } else {
