@@ -9,7 +9,7 @@ This repository has an AI agent that writes and checks unit tests for the Taskly
 3. checks the agent's changes independently: test files only, and tests and typecheck must pass;
 4. only then pushes the tests to your branch as a commit by the agent's GitHub App and posts the agent's report: its decisions, the tests it wrote, the test results and the coverage before and after.
 
-If tests are not needed, you get the report with the reason and no commit. If anything fails, nothing is published.
+If tests are not needed, you get the report with the reason and no commit. If anything fails, no tests are pushed and no report is posted; gh-aw opens an issue with a link to the failed run.
 
 **Coverage on demand.** The same agent and skills can also scan existing code and open a draft PR with tests for the most valuable untested files.
 
@@ -53,8 +53,8 @@ If tests are not needed, you get the report with the reason and no commit. If an
 
 **Running**
 
-- **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent starts automatically and comments in about 7 minutes. Its tests are pushed as a commit by the GitHub App, and CI runs on that commit automatically. On that commit the agent itself shows as *Skipped*: it does not run on its own commits (see Limitations).
-- **Coverage**: Actions → Coverage agent → Run workflow (choose the package and up to 3, 5 or 8 files), or `gh workflow run coverage-agent.lock.yml -f package=both -f max_files=5`.
+- **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent starts when the PR is opened and again on every push to it that changes code, and comments in about 7 minutes. Each run looks at the whole PR, not only the last push. Pushes to a branch without a PR do not start it. Its tests are pushed as a commit by the GitHub App, and CI runs on that commit automatically. On that commit the agent itself shows as *Skipped*: it does not run on its own commits (see Limitations).
+- **Coverage**: Actions → Coverage agent → Run workflow (choose the package and how many untested source files the agent should cover in one run: 3, 5 or 8, to keep the pull request small enough to review), or `gh workflow run coverage-agent.lock.yml -f package=both -f max_files=5`.
 - **Changing the agent or workflows**: edit the `.md` files, run `gh aw compile`, and commit the `.md` and `.lock.yml` files together. Open PRs pick up the change after their branch is updated with `main`.
 - **Locally**: `npm test --prefix backend`, `npm test --prefix frontend`, and `node --test .agents/skills/*/scripts/*.test.mjs` for the scripts.
 
@@ -83,8 +83,10 @@ flowchart TD
     P --> G["Agent in a read-only sandbox: decide, write and run tests<br/>(a few minutes)"]
     G --> D["Threat detection and verification gate"]
     D -- "test files only, tests and typecheck pass" --> S["Push the tests as the GitHub App and post one report"]
-    D -- "any check fails" --> X["Nothing is published"]
+    D -- "any check fails" --> X["No push and no report;<br/>gh-aw opens an issue"]
     S --> CI2["CI runs again on the app's commit"]
+    CI --> R["PR checks: red or green<br/>for the author and reviewers"]
+    CI2 --> R
 ```
 
 **Two different checks.** CI and the agent start at the same time. CI checks the code as the author wrote it and finishes in under a minute, so a PR that breaks tests shows a red CI first. The agent needs a few minutes, and the gate checks its work before anything is published. After the agent pushes tests, CI runs again on its commit.
@@ -190,7 +192,7 @@ Demo PR [#1] adds a feature without tests: task titles must be unique (trimmed, 
 
 ## 7. What I would extend or change for production
 
-- Run the agent when a PR is opened and then only on request (a label or a comment command), instead of on every push. Authors would decide when tests are worth a run, and the agent's own pushes would no longer start one.
+- Run the agent once when a PR is opened and after that only on request (a label or a comment command), instead of on every push to the PR. Authors would decide when tests are worth a run, and the agent's own pushes would no longer start one.
 - Keyless authentication (Anthropic Workload Identity Federation over OIDC) instead of a stored API key.
 - Rulesets and CODEOWNERS for `main` and `.github/**`, with CI and review required.
 - An evaluation suite for the agent (`gh aw graders`) built from the verification scenarios, to catch regressions when prompts or skills change.
