@@ -8,6 +8,9 @@ on:
   workflow_run:
     workflows: ["Unit test agent"]
     types: [completed]
+  # Runs from the base branch and never checks out the pull request's code.
+  pull_request_target:
+    types: [synchronize]
 
 permissions:
   actions: read
@@ -17,6 +20,7 @@ jobs:
   comment:
     name: Comment on the pull request
     if: >
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.event == 'pull_request' &&
       (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
     runs-on: ubuntu-latest
@@ -34,6 +38,9 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "$PR" ]; then echo "This run has no pull request."; exit 0; fi
+
+          # The label is a request for one run. Remove it, so that adding it again asks for the next.
+          gh api --method DELETE "repos/$REPO/issues/$PR/labels/unit-tests" > /dev/null 2>&1 || true
 
           mkdir gate
           gh run download "$RUN_ID" --repo "$REPO" --name gate-summary --dir gate 2> /dev/null || true
@@ -64,3 +71,32 @@ jobs:
           else
             gh api --method POST "repos/$REPO/issues/$PR/comments" -F body=@body.md > /dev/null
           fi
+
+  stale:
+    name: Say that the tests are older than the code
+    # A push by a person after the agent's run. The App's own push is the tests themselves.
+    if: github.event_name == 'pull_request_target' && github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Add a note to the check comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          marker='<!-- unit-test-agent-check -->'
+          stale='<!-- unit-test-agent-stale -->'
+          existing=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.body | contains(\"$marker\")) | .id" | tail -1)
+          if [ -z "$existing" ]; then echo "The agent has not reported on this pull request."; exit 0; fi
+          gh api "repos/$REPO/issues/comments/$existing" --jq .body > body.md
+          if grep -qF "$stale" body.md; then exit 0; fi
+          {
+            echo
+            echo "$stale"
+            echo "> ⚠️ This pull request has newer commits (\`${HEAD_SHA:0:7}\`) than the run above. The agent did not look at them. Add the label \`unit-tests\` to run it again."
+          } >> body.md
+          gh api --method PATCH "repos/$REPO/issues/comments/$existing" -F body=@body.md > /dev/null

@@ -23,8 +23,8 @@ Run every command from the repository root with `--prefix`. Paths after `--` are
    node .agents/skills/run-and-verify-tests/scripts/verify-tests.mjs <package> --input <input folder> --source <source files, comma separated> <your test files>
    ```
 
-   All paths are from the repository root. The input folder is named in the task (`/tmp/gh-aw/agent/pr/` in a pull request run). The script runs the whole suite with coverage, the typecheck, and Prettier on frontend test files, and prints the **Results** and **Coverage** tables with measured numbers. It exits with 1 if any check failed and lists the failing tests and log files.
-4. If the script reports a failure, go back to step 2. Copy its two tables into the report as they are; never write the numbers yourself.
+   All paths are from the repository root. The input folder is named in the task (`/tmp/gh-aw/agent/pr/` in a pull request run). The script runs the whole suite with coverage, the typecheck, and Prettier on frontend test files, and prints the **Results** and **Coverage** tables with measured numbers. It also checks the **patch rules** that the gate applies after you finish (test files only, no deleted, renamed or skipped test, no fewer `expect(` calls in an existing file), and it shows how your new tests behave on the code from before the pull request. It exits with 1 if any check or rule failed and lists the failing tests and log files.
+4. If the script reports a failure, go back to step 2. If a patch rule failed, change your tests so that the rule holds; a rejected patch publishes nothing. If the script lists tests that also pass on the old code, make each one depend on the change, or keep it only when it guards behaviour that must stay the same and say so in the report. Copy its two tables into the report as they are; never write the numbers yourself.
 
 ## Commit
 

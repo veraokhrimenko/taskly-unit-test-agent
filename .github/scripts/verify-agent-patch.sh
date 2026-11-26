@@ -48,12 +48,18 @@ image_for() {
 # box <bridge|none> <package> <command...>: run a command in the package folder, in a container.
 # .git is read-only: code in the container must not be able to change the Git configuration or
 # hooks, because Git commands run on the runner afterwards (core.fsmonitor would run there).
+# The agent's own folders are read-only too: the baseline runs the pull request's tests before
+# the agent starts, and they must not be able to rewrite its prompt, skills or scripts.
 box() {
   local network="$1" pkg="$2"
   shift 2
+  local protected=() dir
+  for dir in .git .github .agents .claude; do
+    [ -e "$PWD/$dir" ] && protected+=(-v "$PWD/$dir:/work/$dir:ro")
+  done
   docker run --rm --network "$network" --user "$(id -u):$(id -g)" \
     -e HOME=/tmp/home -e CI=true \
-    -v "$PWD:/work" -v "$PWD/.git:/work/.git:ro" -v "$box_out:/out" -v "$here:/gate:ro" \
+    -v "$PWD:/work" ${protected[@]+"${protected[@]}"} -v "$box_out:/out" -v "$here:/gate:ro" \
     -w "/work/$pkg" \
     "$(image_for "$pkg")" "$@"
 }
@@ -67,8 +73,31 @@ install() {
   if [ "$pkg" = backend ]; then box bridge backend npm run db:generate; fi
 }
 
+# For the agent's own check "do my tests detect the change?": the source files of the package
+# as they were before the pull request, and the commit the agent starts from.
+export_old_sources() {
+  local pkg="$1" merge_base file
+  git rev-parse HEAD > "$out/agent-start.sha"
+  [ -n "${PR_BASE:-}" ] || return 0
+  git fetch --no-tags --quiet --unshallow origin 2> /dev/null || true
+  git fetch --no-tags --quiet origin "$PR_BASE" 2> /dev/null || true
+  merge_base=$(git merge-base "$PR_BASE" HEAD 2> /dev/null || echo "$PR_BASE")
+  mkdir -p "$out/old-src"
+  git diff --name-only --no-renames "$merge_base" HEAD -- "$pkg/src" \
+    | grep -vE '\.test\.tsx?$|^frontend/src/test/' | while IFS= read -r file; do
+    if git cat-file -e "$merge_base:$file" 2> /dev/null; then
+      mkdir -p "$out/old-src/files/$(dirname "$file")"
+      git show "$merge_base:$file" > "$out/old-src/files/$file"
+      echo "$file" >> "$out/old-src/changed.txt"
+    else
+      echo "$file" >> "$out/old-src/added.txt"
+    fi
+  done || true
+}
+
 baseline() {
   local pkg="$1"
+  export_old_sources "$pkg"
   install "$pkg"
   box none "$pkg" npm run test:coverage -- --coverage.reportOnFailure \
     --reporter=default --reporter=json "--outputFile.json=/out/$pkg-results-before.json" \
@@ -175,10 +204,14 @@ check_tests_kept() {
 
   local file removed=""
   # Put the old versions back for a moment to list their tests.
-  for file in $modified; do git checkout --quiet "$base" -- "$pkg/$file"; done
+  for file in $modified; do
+    git checkout --quiet "$base" -- "$pkg/$file" || { echo "::error::Cannot read the old version of $pkg/$file"; return 1; }
+  done
   # shellcheck disable=SC2086
   if box none "$pkg" npx vitest list "--json=/out/$pkg-names-before.json" $modified > /dev/null 2>&1; then
-    for file in $modified; do git checkout --quiet HEAD -- "$pkg/$file"; done
+    for file in $modified; do
+      git checkout --quiet HEAD -- "$pkg/$file" || { echo "::error::Cannot restore $pkg/$file"; return 1; }
+    done
     removed=$(box none "$pkg" node /gate/gate-report.mjs removed "/out/$pkg-names-before.json" "/out/$pkg-names-after.json") || true
   else
     # The old version cannot be collected (for example it imports removed code): read its titles.
@@ -188,10 +221,11 @@ check_tests_kept() {
     for file in $modified; do
       cp "$pkg/$file" "$box_out/old-tests/$(basename "$file")"
       copies="$copies /out/old-tests/$(basename "$file")"
-      git checkout --quiet HEAD -- "$pkg/$file"
+      git checkout --quiet HEAD -- "$pkg/$file" || { echo "::error::Cannot restore $pkg/$file"; return 1; }
     done
     # shellcheck disable=SC2086
-    removed=$(box none "$pkg" node /gate/gate-report.mjs static-removed "/out/$pkg-names-after.json" $copies) || true
+    removed=$(box none "$pkg" node /gate/gate-report.mjs static-removed "/out/$pkg-names-after.json" \
+      --before-out "/out/$pkg-names-before.json" $copies) || true
   fi
 
   if [ -n "$removed" ]; then

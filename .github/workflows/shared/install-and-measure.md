@@ -5,6 +5,9 @@
 # and the packages to prepare to "$AGENT_INPUT_DIR/packages.txt".
 pre-agent-steps:
   - name: Install dependencies and measure tests and coverage before the agent
+    env:
+      # Lets the script save the source files from before the pull request for the agent's own check.
+      PR_BASE: ${{ github.event.pull_request.base.sha }}
     run: |
       set -euo pipefail
       out="${AGENT_INPUT_DIR:?AGENT_INPUT_DIR is not set}"

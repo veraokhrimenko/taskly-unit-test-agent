@@ -34,21 +34,29 @@ test('sorts new tests by how they behave on the old code', () => {
       ],
     }],
   });
-  assert.match(stdout, /✅ 1 fail on an assertion/);
-  assert.match(stdout, /➖ 1 cannot run/);
+  assert.match(stdout, /✅ 2 run and fail/);
+  assert.match(stdout, /➖ 0 cannot be loaded/);
   assert.match(stdout, /⚠️ 1 also pass/);
   assert.doesNotMatch(stdout, /inconclusive/);
 });
 
 test('counts every test of a file that cannot be loaded as needing new code', () => {
   const stdout = oldCode(['one', 'two'], { testResults: [{ name: file, assertionResults: [] }] });
-  assert.match(stdout, /➖ 2 cannot run/);
+  assert.match(stdout, /➖ 2 cannot be loaded/);
 });
 
 test('says inconclusive when there is no result for a test', () => {
   assert.match(oldCode(['one']), /❔ 1 inconclusive/);
-  assert.match(oldCode(['one']), /➖ 0 cannot run/);
+  assert.match(oldCode(['one']), /➖ 0 cannot be loaded/);
   const missing = oldCode(['one', 'two'], { testResults: [{ name: file, assertionResults: [result('one', 'passed')] }] });
   assert.match(missing, /⚠️ 1 also pass/);
   assert.match(missing, /❔ 1 inconclusive/);
+});
+
+test('prints titles of passing tests without Markdown or HTML', () => {
+  const title = 'ok ``` \n### Fake heading <b>x</b> @someone [link](http://x)';
+  const stdout = oldCode([title], { testResults: [{ name: file, assertionResults: [result(title, 'passed')] }] });
+  const line = stdout.split('\n').find((text) => text.startsWith('- ok'));
+  assert.ok(line);
+  assert.doesNotMatch(line, /[`#<>@\[\]]/);
 });

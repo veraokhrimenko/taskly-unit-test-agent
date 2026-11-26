@@ -2,7 +2,7 @@
 // A fake "backend" package stands in for the real one, so no dependencies are installed.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -32,12 +32,23 @@ process.exit(failed || process.env.FAKE_THRESHOLDS === '1' ? 1 : 0);
 function setup() {
   const repo = mkdtempSync(join(tmpdir(), 'verify-repo-'));
   const input = mkdtempSync(join(tmpdir(), 'verify-input-'));
-  mkdirSync(join(repo, 'backend'));
+  mkdirSync(join(repo, 'backend/tests'), { recursive: true });
+  mkdirSync(join(repo, 'backend/src'));
+  writeFileSync(join(repo, 'backend/tests/router.test.ts'), "it('rejects duplicates', () => { expect(1).toBe(1); });\n");
+  writeFileSync(join(repo, 'backend/src/router.ts'), 'new\n');
+  // Fake "npm test": the test passes on the new source file and fails on the old one.
+  writeFileSync(join(repo, 'backend/fake-test.mjs'), `
+import { readFileSync, writeFileSync } from 'node:fs';
+const out = process.argv.find((arg) => arg.startsWith('--outputFile.json=')).split('=')[1];
+const old = readFileSync('src/router.ts', 'utf8').startsWith('old');
+writeFileSync(out, JSON.stringify({ testResults: [{ name: process.cwd() + '/tests/router.test.ts',
+  assertionResults: [{ title: 'rejects duplicates', status: old ? 'failed' : 'passed' }] }] }));
+`);
   writeFileSync(join(repo, 'backend/fake-vitest.mjs'), fakeRunner);
   writeFileSync(join(repo, 'backend/package.json'), JSON.stringify({
     name: 'fake-backend',
     private: true,
-    scripts: { 'test:coverage': 'node fake-vitest.mjs', typecheck: 'node -e "process.exit(Number(process.env.FAKE_TYPES_FAILED || 0))"' },
+    scripts: { test: 'node fake-test.mjs', 'test:coverage': 'node fake-vitest.mjs', typecheck: 'node -e "process.exit(Number(process.env.FAKE_TYPES_FAILED || 0))"' },
   }));
   // A summary left by an earlier run (the baseline measurement writes the same file).
   mkdirSync(join(repo, 'backend/coverage'));
@@ -49,8 +60,9 @@ function setup() {
   return { repo, input };
 }
 
-function verify(args, env = {}) {
+function verify(args, env = {}, prepare = () => {}) {
   const { repo, input } = setup();
+  prepare(repo, input);
   const finalArgs = args.map((arg) => (arg === '$INPUT' ? input : arg));
   return spawnSync(process.execPath, [script, ...finalArgs], { cwd: repo, encoding: 'utf8', env: { ...process.env, ...env } });
 }
@@ -101,4 +113,27 @@ test('rejects anything that is not a test file of the package', () => {
   ]) {
     assert.equal(verify(args).status, 2, `expected exit 2 for ${args.join(' ')}`);
   }
+});
+
+test('fails when the patch breaks a rule that the gate applies', () => {
+  const { stdout, status } = verify(['backend', '--input', '$INPUT', 'backend/tests/router.test.ts'], {}, (repo) => {
+    writeFileSync(join(repo, 'backend/tests/router.test.ts'), "it.skip('rejects duplicates', () => {});\n");
+  });
+  assert.equal(status, 1);
+  assert.match(stdout, /\*\*Patch rules:\*\* failed/);
+  assert.match(stdout, /adds `\.skip`, `\.only` or `\.todo`/);
+});
+
+test('runs the new tests on the old source files and puts the current files back', () => {
+  let source;
+  const { stdout, status } = verify(['backend', '--input', '$INPUT', 'backend/tests/router.test.ts'], {}, (repo, input) => {
+    source = join(repo, 'backend/src/router.ts');
+    mkdirSync(join(input, 'old-src/files/backend/src'), { recursive: true });
+    writeFileSync(join(input, 'old-src/files/backend/src/router.ts'), 'old\n');
+    writeFileSync(join(input, 'old-src/changed.txt'), 'backend/src/router.ts\n');
+  });
+  assert.equal(status, 0);
+  assert.match(stdout, /\*\*Patch rules:\*\* passed/);
+  assert.match(stdout, /\| Run and fail, so they detect the change \| 1 \|/);
+  assert.equal(readFileSync(source, 'utf8'), 'new\n');
 });
