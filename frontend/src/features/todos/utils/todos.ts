@@ -69,3 +69,8 @@ export function formatDate(date: string): string {
     year: 'numeric',
   }).format(new Date(`${date}T12:00:00`))
 }
+
+export function countHighPriority(todos: Todo[]): number {
+  return todos.filter((todo) => !todo.completed && todo.priority === 'high')
+    .length
+}
