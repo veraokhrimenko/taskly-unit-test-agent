@@ -3,11 +3,22 @@ import type { Filter, Sort, Todo, TodoInput } from '../types'
 export const priorityLabels = { low: 'Low', medium: 'Medium', high: 'High' }
 const priorityOrder = { high: 0, medium: 1, low: 2 }
 
-export function validateTodo(input: TodoInput): Record<string, string> {
+export function validateTodo(
+  input: TodoInput,
+  otherTitles: string[] = [],
+): Record<string, string> {
   const errors: Record<string, string> = {}
-  if (!input.title.trim()) errors.title = 'Enter a task title.'
-  else if (input.title.trim().length > 120)
+  const title = input.title.trim()
+  if (!title) errors.title = 'Enter a task title.'
+  else if (title.length > 120)
     errors.title = 'The title must be at most 120 characters.'
+  else if (
+    otherTitles.some(
+      (other) =>
+        other.trim().toLocaleLowerCase('en') === title.toLocaleLowerCase('en'),
+    )
+  )
+    errors.title = 'A task with this title already exists.'
   if (input.description.trim().length > 2000)
     errors.description = 'The description must be at most 2000 characters.'
   if (input.due_date) {
