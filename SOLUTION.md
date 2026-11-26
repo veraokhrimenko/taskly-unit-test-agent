@@ -120,7 +120,7 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 - Rulesets and CODEOWNERS for `main` and `.github/**`.
 - An evaluation suite built from the test PRs, to catch regressions when prompts change.
 - Mutation testing and property-based tests to measure test strength.
-- If intended behaviour is often described in linked issues, prepare the issue text as input, as the PR text is now, instead of giving the agent GitHub access.
+- Give the agent more context about intent, such as linked issues and review comments from people with write access, prepared as input like the PR text, instead of open GitHub access.
 
 [#1]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/1
 [#2]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/2
