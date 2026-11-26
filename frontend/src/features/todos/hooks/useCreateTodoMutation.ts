@@ -16,5 +16,9 @@ export function useCreateTodoMutation() {
         ...current.filter((todo) => todo.id !== saved.id),
       ])
     },
+    onError: async () => {
+      // The request may have reached the server before it failed: load the real list.
+      await queryClient.invalidateQueries({ queryKey: todoKeys.list })
+    },
   })
 }
