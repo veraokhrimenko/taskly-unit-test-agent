@@ -25,3 +25,7 @@ export const todoSchema = createSchema.extend({
   created_at: z.iso.datetime({ offset: true }),
   updated_at: z.iso.datetime({ offset: true }),
 });
+
+export function isShortTitle(title: string): boolean {
+  return title.trim().length <= 20;
+}
