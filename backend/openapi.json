@@ -72,6 +72,9 @@
               }
             }
           },
+          "409": {
+            "description": "A task with this title already exists"
+          },
           "422": {
             "description": "Invalid input"
           }
@@ -134,6 +137,9 @@
           },
           "404": {
             "description": "Task not found"
+          },
+          "409": {
+            "description": "A task with this title already exists"
           },
           "422": {
             "description": "Invalid input"

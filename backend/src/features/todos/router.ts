@@ -2,6 +2,8 @@ import { Router } from 'express';
 import type { TodoStore } from './types.js';
 import { createSchema, updateSchema, idSchema } from './validators.js';
 
+const duplicateTitle = 'A task with this title already exists.';
+
 export function createTodosRouter(repository: TodoStore) {
   const router = Router();
   router.param('id', (req, res, next, id) => {
@@ -14,6 +16,7 @@ export function createTodosRouter(repository: TodoStore) {
   router.post('/', async (req, res) => {
     const result = createSchema.safeParse(req.body);
     if (!result.success) return res.status(422).json({ detail: result.error.issues });
+    if (await repository.titleExists(result.data.title)) return res.status(409).json({ detail: duplicateTitle });
     res.status(201).json(await repository.create(result.data));
   });
   router.get('/:id', async (req, res) => {
@@ -24,7 +27,11 @@ export function createTodosRouter(repository: TodoStore) {
   router.patch('/:id', async (req, res) => {
     const result = updateSchema.safeParse(req.body);
     if (!result.success) return res.status(422).json({ detail: result.error.issues });
-    const todo = await repository.update(Number(res.locals.todoId), result.data);
+    const id = Number(res.locals.todoId);
+    if (result.data.title !== undefined && await repository.titleExists(result.data.title, id)) {
+      return res.status(409).json({ detail: duplicateTitle });
+    }
+    const todo = await repository.update(id, result.data);
     if (!todo) return res.status(404).json({ detail: 'Task not found.' });
     res.json(todo);
   });
