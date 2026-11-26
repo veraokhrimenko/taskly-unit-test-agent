@@ -96,6 +96,7 @@ safe-outputs:
     title-prefix: "[unit-test-agent] "
     draft: true
     allowed-files:
+      - "backend/tests/*.test.ts"
       - "backend/tests/**/*.test.ts"
       - "frontend/src/**/*.test.ts"
       - "frontend/src/**/*.test.tsx"
