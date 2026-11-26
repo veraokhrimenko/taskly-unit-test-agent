@@ -23,6 +23,43 @@ describe('TodoForm', () => {
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
+  it('rejects a title that matches another task ignoring case and spaces', async () => {
+    const onSubmit = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <TodoForm
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        busy={false}
+        error={null}
+        otherTitles={['Plan the sprint']}
+      />,
+    )
+    await user.type(screen.getByLabelText(/Task title/), '  PLAN THE SPRINT ')
+    await user.click(screen.getByRole('button', { name: 'Save task' }))
+    expect(
+      screen.getByText('A task with this title already exists.'),
+    ).toBeVisible()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('submits a title that differs from the other tasks', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    render(
+      <TodoForm
+        onSubmit={onSubmit}
+        onCancel={vi.fn()}
+        busy={false}
+        error={null}
+        otherTitles={['Plan the sprint']}
+      />,
+    )
+    await user.type(screen.getByLabelText(/Task title/), 'Plan the demo')
+    await user.click(screen.getByRole('button', { name: 'Save task' }))
+    expect(onSubmit).toHaveBeenCalledOnce()
+  })
+
   it('submits trimmed values and the selected priority', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     const user = userEvent.setup()
