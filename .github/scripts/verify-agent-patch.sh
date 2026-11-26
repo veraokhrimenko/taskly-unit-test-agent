@@ -58,7 +58,9 @@ box() {
     "$(image_for "$pkg")" "$@"
 }
 
-# Dependencies need the network. Install scripts are disabled, and no project code runs here.
+# Dependencies need the network; install scripts are disabled. Generating the Prisma client
+# needs it too (Prisma downloads its engine), and it loads prisma.config.ts, so this one step
+# runs project code with network access. The container holds no secrets.
 install() {
   local pkg="$1"
   box bridge "$pkg" npm ci --ignore-scripts --no-audit --no-fund

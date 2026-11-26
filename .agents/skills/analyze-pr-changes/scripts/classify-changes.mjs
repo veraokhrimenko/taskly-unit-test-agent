@@ -38,17 +38,23 @@ function classify(path) {
   if (pkg === 'backend' && inner.startsWith('tests/')) return { pkg, kind: 'test' };
   if (/\.test\.tsx?$/.test(path)) return { pkg, kind: 'test' };
   if (pkg && inner.startsWith('src/') && /\.tsx?$/.test(path)) {
+    // Without a coverage baseline nothing is known about exclusions: keep the file as source,
+    // so a failed baseline cannot make every change look like it needs no tests.
+    if (!summaries[pkg]) return { pkg, kind: 'source' };
     // Not instrumented by coverage means excluded in the coverage config (types, constants, ...).
     return { pkg, kind: covered[pkg].has(inner) ? 'source' : 'excluded' };
   }
   return { pkg, kind: 'config' };
 }
 
-// Where the project keeps the test for a source file.
+// Where the project keeps the test for a source file. In the frontend a .ts file can have a
+// .test.tsx test (hooks are rendered with a JSX wrapper), so both extensions are checked.
 function testFileFor(pkg, path) {
   const name = basename(path).replace(/\.tsx?$/, '');
-  const ext = extname(path) === '.tsx' ? '.test.tsx' : '.test.ts';
-  return pkg === 'backend' ? `backend/tests/${name}.test.ts` : join(dirname(path), `${name}${ext}`);
+  if (pkg === 'backend') return `backend/tests/${name}.test.ts`;
+  const extensions = extname(path) === '.tsx' ? ['.test.tsx', '.test.ts'] : ['.test.ts', '.test.tsx'];
+  const candidates = extensions.map((ext) => join(dirname(path), `${name}${ext}`));
+  return candidates.find((file) => existsSync(file)) ?? candidates[0];
 }
 
 function coverageOf(pkg, path) {
@@ -90,4 +96,9 @@ for (const pkg of packages) {
   // Tests can pass while a coverage threshold from the project's config is not met.
   const thresholds = read(`${pkg}-thresholds-before.status`) ? ', coverage thresholds not met' : '';
   console.log(`| ${pkg} | ${status.trim()}${thresholds} |`);
+}
+
+const unmeasured = packages.filter((pkg) => !summaries[pkg] && rows.some((row) => row.path.startsWith(`${pkg}/`)));
+if (unmeasured.length) {
+  console.log(`\nNo coverage baseline for ${unmeasured.join(', ')}: every file under src/ is listed as source. Check the coverage configuration yourself for excluded files.`);
 }

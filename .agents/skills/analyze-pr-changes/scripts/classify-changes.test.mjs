@@ -9,19 +9,23 @@ import { test } from 'node:test';
 const script = new URL('./classify-changes.mjs', import.meta.url).pathname;
 
 // A fake repository (for "does the test file exist") and a fake input folder.
-function setup(changed) {
+function setup(changed, { coverage = true } = {}) {
   const repo = mkdtempSync(join(tmpdir(), 'classify-repo-'));
   const input = mkdtempSync(join(tmpdir(), 'classify-input-'));
   mkdirSync(join(repo, 'backend/tests'), { recursive: true });
   writeFileSync(join(repo, 'backend/tests/router.test.ts'), '');
+  mkdirSync(join(repo, 'frontend/src/hooks'), { recursive: true });
+  writeFileSync(join(repo, 'frontend/src/hooks/useThing.test.tsx'), '');
   writeFileSync(join(input, 'changed-files.tsv'), changed.map(([status, path]) => `${status}\t${path}`).join('\n'));
   const summary = (pkg, files) =>
     JSON.stringify(Object.fromEntries([
       ['total', { lines: { pct: 50 }, branches: { pct: 40 } }],
       ...files.map((file) => [`/runner/work/repo/${pkg}/${file}`, { lines: { pct: 80 }, branches: { pct: 60 } }]),
     ]));
-  writeFileSync(join(input, 'backend-coverage-before.json'), summary('backend', ['src/features/todos/router.ts', 'src/core/config.ts']));
-  writeFileSync(join(input, 'frontend-coverage-before.json'), summary('frontend', ['src/lib/http.ts', 'src/App.tsx']));
+  if (coverage) {
+    writeFileSync(join(input, 'backend-coverage-before.json'), summary('backend', ['src/features/todos/router.ts', 'src/core/config.ts']));
+    writeFileSync(join(input, 'frontend-coverage-before.json'), summary('frontend', ['src/lib/http.ts', 'src/App.tsx', 'src/hooks/useThing.ts']));
+  }
   writeFileSync(join(input, 'backend-tests-before.status'), 'failed\n');
   writeFileSync(join(input, 'frontend-tests-before.status'), 'passed\n');
   writeFileSync(join(input, 'frontend-thresholds-before.status'), 'failed\n');
@@ -80,4 +84,23 @@ test('says when coverage thresholds were not met before the agent', () => {
   const { stdout } = setup([['modified', 'frontend/src/lib/http.ts']]);
   assert.match(stdout, /\| backend \| failed \|/);
   assert.match(stdout, /\| frontend \| passed, coverage thresholds not met \|/);
+});
+
+test('finds a .test.tsx file next to a .ts source file', () => {
+  const { stdout } = setup([['modified', 'frontend/src/hooks/useThing.ts']]);
+  assert.match(row(stdout, 'frontend/src/hooks/useThing.ts'), /\| source \| `frontend\/src\/hooks\/useThing\.test\.tsx` \| exists \|/);
+});
+
+test('keeps source files as source when there is no coverage baseline', () => {
+  const { stdout, status } = setup(
+    [
+      ['modified', 'frontend/src/hooks/useThing.ts'],
+      ['modified', 'backend/src/features/todos/router.ts'],
+    ],
+    { coverage: false },
+  );
+  assert.equal(status, 0);
+  assert.match(row(stdout, 'frontend/src/hooks/useThing.ts'), /\| source \| `frontend\/src\/hooks\/useThing\.test\.tsx` \| exists \| not measured \|/);
+  assert.match(row(stdout, 'backend/src/features/todos/router.ts'), /\| source \| `backend\/tests\/router\.test\.ts` \| exists \| not measured \|/);
+  assert.match(stdout, /No coverage baseline for backend, frontend/);
 });
