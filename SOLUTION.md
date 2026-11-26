@@ -57,8 +57,8 @@ flowchart TD
     G --> D{"Threat detection<br/>and gate (in a container)"}
     D -- pass --> S["The App pushes the tests<br/>and posts the agent's report"]
     D -- fail --> X["Nothing is published"]
-    S --> C["A workflow without AI posts<br/>the gate's own results"]
-    X --> C
+    S -- run finished --> C["A workflow without AI posts<br/>the gate's own results"]
+    X -- run finished --> C
     S -- new commit --> CI["CI: typecheck, tests, Prettier"]
 ```
 
