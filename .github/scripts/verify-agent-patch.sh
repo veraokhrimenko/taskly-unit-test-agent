@@ -5,7 +5,8 @@
 #
 # Usage:
 #   verify-agent-patch.sh apply <patch-file>   apply the agent patch, check changed files
-#   verify-agent-patch.sh test <package>       install, run tests with coverage, typecheck
+#   verify-agent-patch.sh test <package>       install, run tests with coverage, typecheck,
+#                                              and for the frontend the Prettier check that CI runs
 #   verify-agent-patch.sh old-code <package> <pr-base-sha> <agent-base-sha>
 #                                              report whether the new tests fail on the code before the PR
 set -euo pipefail
@@ -14,6 +15,11 @@ summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
 output="${GITHUB_OUTPUT:-/dev/null}"
 
 apply_patch() {
+  # The agent produces one patch. More than one would mean that only some were checked.
+  if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
+    echo "::error::Expected exactly one patch file, got: $*"
+    exit 1
+  fi
   local patch="$1"
   local base
   base=$(grep -m1 '^X-GH-AW-Base-Commit: ' "$patch" | cut -d' ' -f2)
@@ -61,9 +67,13 @@ test_package() {
   npm ci --prefix "$pkg" --ignore-scripts --no-audit --no-fund
   if [ "$pkg" = backend ]; then npm run db:generate --prefix backend; fi
 
-  local tests=passed typecheck=passed
+  local tests=passed typecheck=passed format="not run"
   npm run test:coverage --prefix "$pkg" || tests=failed
   npm run typecheck --prefix "$pkg" || typecheck=failed
+  if [ "$pkg" = frontend ]; then
+    format=passed
+    npm run format:check --prefix frontend || format=failed
+  fi
 
   local lines="n/a"
   if [ -f "$pkg/coverage/coverage-summary.json" ]; then
@@ -77,11 +87,12 @@ test_package() {
     echo "| --- | --- |"
     echo "| Tests | $tests |"
     echo "| Typecheck | $typecheck |"
+    echo "| Prettier | $format |"
     echo "| Line coverage after | $lines |"
     echo
   } >> "$summary"
 
-  [ "$tests" = passed ] && [ "$typecheck" = passed ]
+  [ "$tests" = passed ] && [ "$typecheck" = passed ] && [ "$format" != failed ]
 }
 
 old_code_check() {
@@ -119,7 +130,7 @@ old_code_check() {
 }
 
 case "${1:-}" in
-  apply) apply_patch "${2:?patch file required}" ;;
+  apply) shift; apply_patch "$@" ;;
   test) test_package "${2:?package required}" ;;
   old-code) old_code_check "${2:?package required}" "${3:?pr base sha required}" "${4:?agent base sha required}" ;;
   *) echo "usage: $0 apply <patch> | test <package> | old-code <package> <pr-base> <agent-base>" >&2; exit 2 ;;

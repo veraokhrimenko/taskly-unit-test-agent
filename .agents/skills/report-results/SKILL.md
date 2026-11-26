@@ -21,9 +21,9 @@ Write exactly one report. In a pull request run, post it with `add_comment`. In 
 - `<test file>`: <behaviour verified, in plain English>
 
 **Results**
-| Package | Command | Result |
+| Package | Check | Result |
 | --- | --- | --- |
-| backend | `npm test --prefix backend` | <passed> / <failed> |
+| backend | `npm run test:coverage --prefix backend` | <passed> / <failed>: <counts> |
 
 **Coverage**
 | Scope | Lines before | Lines after | Branches before | Branches after |

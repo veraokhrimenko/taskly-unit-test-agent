@@ -19,11 +19,13 @@ writeFileSync(out, JSON.stringify({
   numTotalTests: 3, numPassedTests: failed ? 2 : 3, numFailedTests: failed ? 1 : 0,
   testResults: [{ assertionResults: [{ status: failed ? 'failed' : 'passed', fullName: 'rejects duplicates' }] }],
 }));
-mkdirSync('coverage', { recursive: true });
-writeFileSync('coverage/coverage-summary.json', JSON.stringify({
-  total: { lines: { pct: 70 }, branches: { pct: 60 } },
-  '/runner/repo/backend/src/router.ts': { lines: { pct: 100 }, branches: { pct: 100 } },
-}));
+if (process.env.FAKE_NO_COVERAGE !== '1') {
+  mkdirSync('coverage', { recursive: true });
+  writeFileSync('coverage/coverage-summary.json', JSON.stringify({
+    total: { lines: { pct: 70 }, branches: { pct: 60 } },
+    '/runner/repo/backend/src/router.ts': { lines: { pct: 100 }, branches: { pct: 100 } },
+  }));
+}
 process.exit(failed ? 1 : 0);
 `;
 
@@ -37,6 +39,9 @@ function setup() {
     private: true,
     scripts: { 'test:coverage': 'node fake-vitest.mjs', typecheck: 'node -e "process.exit(Number(process.env.FAKE_TYPES_FAILED || 0))"' },
   }));
+  // A summary left by an earlier run (the baseline measurement writes the same file).
+  mkdirSync(join(repo, 'backend/coverage'));
+  writeFileSync(join(repo, 'backend/coverage/coverage-summary.json'), JSON.stringify({ total: { lines: { pct: 99 }, branches: { pct: 99 } } }));
   writeFileSync(join(input, 'backend-coverage-before.json'), JSON.stringify({
     total: { lines: { pct: 50 }, branches: { pct: 40 } },
     '/runner/repo/backend/src/router.ts': { lines: { pct: 80 }, branches: { pct: 50 } },
@@ -71,6 +76,13 @@ test('reports a failed typecheck', () => {
   const { stdout, status } = verify(['backend', '--input', '$INPUT'], { FAKE_TYPES_FAILED: '1' });
   assert.equal(status, 1);
   assert.match(stdout, /\| backend \| `npm run typecheck --prefix backend` \| failed \|/);
+});
+
+test('does not report coverage left by an earlier run when the suite writes none', () => {
+  const { stdout, status } = verify(['backend', '--input', '$INPUT'], { FAKE_FAILED: '1', FAKE_NO_COVERAGE: '1' });
+  assert.equal(status, 1);
+  assert.match(stdout, /\| backend, all files \| 50% \| not measured \| 40% \| not measured \|/);
+  assert.doesNotMatch(stdout, /99%/);
 });
 
 test('rejects anything that is not a test file of the package', () => {
