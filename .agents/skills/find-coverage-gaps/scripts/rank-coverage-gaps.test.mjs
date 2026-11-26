@@ -1,7 +1,7 @@
 // Tests for rank-coverage-gaps.mjs. Run: node --test .agents/skills/*/scripts/*.test.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -16,7 +16,7 @@ function entry(lines, branches) {
   };
 }
 
-function run({ maxFiles = 3, frontend = {}, backend = {} }) {
+function run({ maxFiles = 3, frontend = {}, backend = {}, cwd = undefined }) {
   const input = mkdtempSync(join(tmpdir(), 'rank-input-'));
   writeFileSync(join(input, 'packages.txt'), 'backend\nfrontend\n');
   writeFileSync(join(input, 'max-files.txt'), `${maxFiles}\n`);
@@ -25,7 +25,7 @@ function run({ maxFiles = 3, frontend = {}, backend = {} }) {
     for (const [file, data] of Object.entries(files)) summary[`/runner/work/repo/${pkg}/${file}`] = data;
     writeFileSync(join(input, `${pkg}-coverage-before.json`), JSON.stringify(summary));
   }
-  return spawnSync(process.execPath, [script, input], { encoding: 'utf8' });
+  return spawnSync(process.execPath, [script, input], { encoding: 'utf8', cwd });
 }
 
 function ranked(stdout) {
@@ -76,4 +76,19 @@ test('respects the file limit and lists the rest', () => {
   });
   assert.deepEqual(ranked(stdout), ['frontend/src/lib/http.ts']);
   assert.match(stdout, /Not chosen because of the limit: `frontend\/src\/features\/todos\/hooks\/useTodosQuery\.ts`\./);
+});
+
+test('finds a .test.tsx file next to a .ts source file', () => {
+  const repo = mkdtempSync(join(tmpdir(), 'rank-repo-'));
+  mkdirSync(join(repo, 'frontend/src/hooks'), { recursive: true });
+  writeFileSync(join(repo, 'frontend/src/hooks/useThing.test.tsx'), '');
+  const { stdout } = run({
+    cwd: repo,
+    frontend: {
+      'src/hooks/useThing.ts': entry([5, 10], [1, 4]),
+      'src/hooks/useOther.ts': entry([5, 10], [1, 3]),
+    },
+  });
+  assert.match(stdout, /`frontend\/src\/hooks\/useThing\.test\.tsx` \(exists\)/);
+  assert.match(stdout, /`frontend\/src\/hooks\/useOther\.test\.ts` \(missing\)/);
 });

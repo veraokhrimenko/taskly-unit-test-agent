@@ -33,10 +33,14 @@ function group(path) {
   return 3;
 }
 
+// In the frontend a .ts file can have a .test.tsx test (hooks are rendered with a JSX wrapper),
+// so both extensions are checked.
 function testFileFor(path) {
   const name = basename(path).replace(/\.tsx?$/, '');
   if (path.startsWith('backend/')) return `backend/tests/${name}.test.ts`;
-  return join(dirname(path), `${name}${extname(path) === '.tsx' ? '.test.tsx' : '.test.ts'}`);
+  const extensions = extname(path) === '.tsx' ? ['.test.tsx', '.test.ts'] : ['.test.ts', '.test.tsx'];
+  const candidates = extensions.map((ext) => join(dirname(path), `${name}${ext}`));
+  return candidates.find((file) => existsSync(file)) ?? candidates[0];
 }
 
 const packages = (read('packages.txt') ?? 'backend\nfrontend').split('\n').filter(Boolean);
