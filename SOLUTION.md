@@ -54,7 +54,9 @@ On every pull request that changes code, the agent decides file by file whether 
 **Running**
 
 - **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent runs when the PR is opened and again on every push to the PR that changes code. Pushes to a branch without a PR do not start it. It comments in about 7 minutes.
-- **Coverage** (optional, started by hand): Actions → Coverage agent → Run workflow. By default it ranks the untested files in both packages and writes tests for the 5 that need them most.
+- **Coverage** (optional, started by hand): Actions → Coverage agent → Run workflow. It ranks every file with untested code and writes tests for the top ones: 5 by default, or 3 or 8. Then it runs the whole test suite.
+
+  **Why there is a limit.** Each file adds about $0.05 and several minutes. More files make a pull request that nobody can review properly, and a run that may hit the agent's step limit and publish nothing. The files further down the ranking are also worth less: often only a line or a branch is untested. To cover more, merge the pull request and run the workflow again; the next files are then at the top.
 
 ## 3. Where the custom agent and skills are defined and how they are used
 
