@@ -1,5 +1,5 @@
-# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"e1b1da2e5eb7bf202b70cc83e22211b7deb8eb279e038dab868c6801f5044a80","body_hash":"e8385def7fc1a1e505c3650b1a74e529102fe5167afd261262368e4d71cd2b58","compiler_version":"v1.2.2","strict":true,"agent_id":"claude","agent_model":"claude-sonnet-5-5","engine_versions":{"claude":"2.1.317"}}
-# gh-aw-manifest: {"version":1,"secrets":["ANTHROPIC_API_KEY","COPILOT_GITHUB_TOKEN","GH_AW_CI_TRIGGER_TOKEN","GH_AW_DEFAULT_OTLP_ENDPOINT","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN"],"actions":[{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/download-artifact","sha":"9000827ccba6bdab643e8b6fd33ac0654aef8333","version":"v8.0.2"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"949feb2413d6458794dcd2491c4babbbce0c15c1","version":"949feb2413d6458794dcd2491c4babbbce0c15c1"},{"repo":"actions/upload-artifact","sha":"cf430e030ddbb5b0abf93d22962f4752f3646cd9","version":"v7.0.2"},{"repo":"github/gh-aw-actions/setup","sha":"53d0749e19424a918acd82b4d140264ce48f2f14","version":"v1.2.2"}],"skills":[".agents/skills/find-coverage-gaps",".agents/skills/report-results",".agents/skills/run-and-verify-tests",".agents/skills/write-backend-tests",".agents/skills/write-frontend-tests"],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.29.11","digest":"sha256:8774a73c351395b41d2ad0af4ddb4689007c67de3cd08bd9f43bb8a0e300690e","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.29.11@sha256:8774a73c351395b41d2ad0af4ddb4689007c67de3cd08bd9f43bb8a0e300690e"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.29.11","digest":"sha256:88d2d0e315a504d93fd4fb8847fd0f6b7f4469f41a6fc6047b3dc9654c56ab2c","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.29.11@sha256:88d2d0e315a504d93fd4fb8847fd0f6b7f4469f41a6fc6047b3dc9654c56ab2c"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.29.11","digest":"sha256:861739ecf924dd2db5e5fb652db2ad82aaafd1615623297ddabc8f41a36b2847","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.29.11@sha256:861739ecf924dd2db5e5fb652db2ad82aaafd1615623297ddabc8f41a36b2847"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.5.6","digest":"sha256:342cd624e1f179d91be2de7a146fc4f387092e62e6c8a47506d7932e113d2311","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.5.6@sha256:342cd624e1f179d91be2de7a146fc4f387092e62e6c8a47506d7932e113d2311"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:8735428c2d4e602f90781ba0c571c400e8ff93c7ee1508a75d71f87e34e415cc","pinned_image":"ghcr.io/github/gh-aw-node@sha256:8735428c2d4e602f90781ba0c571c400e8ff93c7ee1508a75d71f87e34e415cc"},{"image":"ghcr.io/github/github-mcp-server:v2.1.0","digest":"sha256:f6056fc10bfffcc8c81a6417a2e9ca12808647e8dd6049642a4feaadee0e0f8a","pinned_image":"ghcr.io/github/github-mcp-server:v2.1.0@sha256:f6056fc10bfffcc8c81a6417a2e9ca12808647e8dd6049642a4feaadee0e0f8a"}],"mcp_servers":[{"name":"github","tools":["get_commit","get_file_contents","get_latest_release","get_me","get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","get_release_by_tag","get_tag","issue_read","list_branches","list_commits","list_issue_types","list_issues","list_pull_requests","list_releases","list_starred_repositories","list_tags","pull_request_read","search_code","search_issues","search_pull_requests","search_repositories"]},{"name":"safeoutputs","tools":["create_pull_request","noop","report_incomplete","report_missing_data","report_missing_tool"]}],"threat_detection":{"mode":"enabled"},"admission":false,"agent_metadata":{"39c4c690c2ff8d0ab239":{"name":"unit-test-engineer"}}}
+# gh-aw-metadata: {"schema_version":"v4","frontmatter_hash":"bb77fa8d1a2798f653d8ace25a20dc28813035ad8e2287d30c08b746829548b1","body_hash":"e8385def7fc1a1e505c3650b1a74e529102fe5167afd261262368e4d71cd2b58","compiler_version":"v1.2.2","strict":true,"agent_id":"claude","agent_model":"claude-sonnet-5-5","engine_versions":{"claude":"2.1.317"}}
+# gh-aw-manifest: {"version":1,"secrets":["ANTHROPIC_API_KEY","COPILOT_GITHUB_TOKEN","GH_AW_CI_TRIGGER_TOKEN","GH_AW_DEFAULT_OTLP_ENDPOINT","GH_AW_DEFAULT_OTLP_HEADERS","GH_AW_GITHUB_MCP_SERVER_TOKEN","GH_AW_GITHUB_TOKEN","GITHUB_TOKEN","TEST_AGENT_APP_PRIVATE_KEY"],"actions":[{"repo":"actions/checkout","sha":"3d3c42e5aac5ba805825da76410c181273ba90b1","version":"v7.0.1"},{"repo":"actions/create-github-app-token","sha":"64ab729a6294000f5aa4a4bc0b73d1f32bc45510","version":"v3.3.0"},{"repo":"actions/download-artifact","sha":"9000827ccba6bdab643e8b6fd33ac0654aef8333","version":"v8.0.2"},{"repo":"actions/github-script","sha":"3a2844b7e9c422d3c10d287c895573f7108da1b3","version":"v9.0.0"},{"repo":"actions/setup-node","sha":"949feb2413d6458794dcd2491c4babbbce0c15c1","version":"949feb2413d6458794dcd2491c4babbbce0c15c1"},{"repo":"actions/upload-artifact","sha":"cf430e030ddbb5b0abf93d22962f4752f3646cd9","version":"v7.0.2"},{"repo":"github/gh-aw-actions/setup","sha":"53d0749e19424a918acd82b4d140264ce48f2f14","version":"v1.2.2"}],"skills":[".agents/skills/find-coverage-gaps",".agents/skills/report-results",".agents/skills/run-and-verify-tests",".agents/skills/write-backend-tests",".agents/skills/write-frontend-tests"],"containers":[{"image":"ghcr.io/github/gh-aw-firewall/agent:0.29.11","digest":"sha256:8774a73c351395b41d2ad0af4ddb4689007c67de3cd08bd9f43bb8a0e300690e","pinned_image":"ghcr.io/github/gh-aw-firewall/agent:0.29.11@sha256:8774a73c351395b41d2ad0af4ddb4689007c67de3cd08bd9f43bb8a0e300690e"},{"image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.29.11","digest":"sha256:88d2d0e315a504d93fd4fb8847fd0f6b7f4469f41a6fc6047b3dc9654c56ab2c","pinned_image":"ghcr.io/github/gh-aw-firewall/api-proxy:0.29.11@sha256:88d2d0e315a504d93fd4fb8847fd0f6b7f4469f41a6fc6047b3dc9654c56ab2c"},{"image":"ghcr.io/github/gh-aw-firewall/squid:0.29.11","digest":"sha256:861739ecf924dd2db5e5fb652db2ad82aaafd1615623297ddabc8f41a36b2847","pinned_image":"ghcr.io/github/gh-aw-firewall/squid:0.29.11@sha256:861739ecf924dd2db5e5fb652db2ad82aaafd1615623297ddabc8f41a36b2847"},{"image":"ghcr.io/github/gh-aw-mcpg:v0.5.6","digest":"sha256:342cd624e1f179d91be2de7a146fc4f387092e62e6c8a47506d7932e113d2311","pinned_image":"ghcr.io/github/gh-aw-mcpg:v0.5.6@sha256:342cd624e1f179d91be2de7a146fc4f387092e62e6c8a47506d7932e113d2311"},{"image":"ghcr.io/github/gh-aw-node","digest":"sha256:8735428c2d4e602f90781ba0c571c400e8ff93c7ee1508a75d71f87e34e415cc","pinned_image":"ghcr.io/github/gh-aw-node@sha256:8735428c2d4e602f90781ba0c571c400e8ff93c7ee1508a75d71f87e34e415cc"},{"image":"ghcr.io/github/github-mcp-server:v2.1.0","digest":"sha256:f6056fc10bfffcc8c81a6417a2e9ca12808647e8dd6049642a4feaadee0e0f8a","pinned_image":"ghcr.io/github/github-mcp-server:v2.1.0@sha256:f6056fc10bfffcc8c81a6417a2e9ca12808647e8dd6049642a4feaadee0e0f8a"}],"mcp_servers":[{"name":"github","tools":["get_commit","get_file_contents","get_latest_release","get_me","get_pull_request","get_pull_request_comments","get_pull_request_diff","get_pull_request_files","get_pull_request_review_comments","get_pull_request_reviews","get_pull_request_status","get_release_by_tag","get_tag","issue_read","list_branches","list_commits","list_issue_types","list_issues","list_pull_requests","list_releases","list_starred_repositories","list_tags","pull_request_read","search_code","search_issues","search_pull_requests","search_repositories"]},{"name":"safeoutputs","tools":["create_pull_request","noop","report_incomplete","report_missing_data","report_missing_tool"]}],"threat_detection":{"mode":"enabled"},"admission":false,"agent_metadata":{"39c4c690c2ff8d0ab239":{"name":"unit-test-engineer"}}}
 # This file was automatically generated by gh-aw (v1.2.2). DO NOT EDIT. To debug this workflow, load the skill at https://github.com/github/gh-aw/blob/main/debug.md
 #
 #    ___                   _   _
@@ -38,9 +38,11 @@
 #   - GH_AW_GITHUB_MCP_SERVER_TOKEN
 #   - GH_AW_GITHUB_TOKEN
 #   - GITHUB_TOKEN
+#   - TEST_AGENT_APP_PRIVATE_KEY
 #
 # Custom actions used:
 #   - actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+#   - actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
 #   - actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
 #   - actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
 #   - actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -1677,6 +1679,21 @@ jobs:
           GH_AW_INFO_AWF_VERSION: "v0.29.11"
           GH_AW_INFO_ENGINE_ID: "claude"
           GH_AW_SETUP_AW_CONTEXT: ${{ inputs.aw_context }}
+      - name: Generate GitHub App token
+        id: safe-outputs-app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.TEST_AGENT_APP_ID }}
+          private-key: ${{ secrets.TEST_AGENT_APP_PRIVATE_KEY }}
+          skip-token-revoke: false
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          github-api-url: ${{ github.api_url }}
+          permission-actions: read
+          permission-checks: read
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
       - name: Download agent output artifact
         id: download-agent-output
         continue-on-error: true
@@ -1738,7 +1755,7 @@ jobs:
           GH_AW_AMBIENT_CONTEXT: ${{ needs.agent.outputs.ambient_context }}
           GH_AW_WORKFLOW_ID: "coverage-agent"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
@@ -1758,7 +1775,7 @@ jobs:
           GH_AW_DETECTION_REASON: ${{ needs.detection.outputs.detection_reason }}
           GH_AW_DETECTION_THREAT_KINDS: ${{ needs.detection.outputs.detection_threat_kinds }}
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
@@ -1777,7 +1794,7 @@ jobs:
           GH_AW_ENGINE_ID: "claude"
           GH_AW_ENGINE_MODEL: "claude-sonnet-5-5"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
@@ -1796,7 +1813,7 @@ jobs:
           GH_AW_ENGINE_ID: "claude"
           GH_AW_ENGINE_MODEL: "claude-sonnet-5-5"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
@@ -1841,6 +1858,8 @@ jobs:
           GH_AW_ENGINE_API_HOSTS: "api.anthropic.com"
           GH_AW_CODE_PUSH_FAILURE_ERRORS: ${{ needs.safe_outputs.outputs.code_push_failure_errors }}
           GH_AW_CODE_PUSH_FAILURE_COUNT: ${{ needs.safe_outputs.outputs.code_push_failure_count }}
+          GH_AW_SAFE_OUTPUTS_APP_TOKEN_MINTING_FAILED: ${{ needs.safe_outputs.outputs.app_token_minting_failed }}
+          GH_AW_CONCLUSION_APP_TOKEN_MINTING_FAILED: ${{ steps.safe-outputs-app-token.outcome == 'failure' }}
           GH_AW_LOCKDOWN_CHECK_FAILED: ${{ needs.activation.outputs.lockdown_check_failed }}
           GH_AW_OAUTH_TOKEN_CHECK_FAILED: ${{ needs.activation.outputs.oauth_token_check_failed }}
           GH_AW_STALE_LOCK_FILE_FAILED: ${{ needs.activation.outputs.stale_lock_file_failed }}
@@ -1859,7 +1878,7 @@ jobs:
           GH_AW_MISSING_DATA_REPORT_AS_FAILURE: "true"
           GH_AW_TIMEOUT_MINUTES: "40"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token || github.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
@@ -1878,7 +1897,7 @@ jobs:
           GH_AW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           GH_AW_REPORT_FAILED_JOBS: "true"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token || github.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');
@@ -2398,6 +2417,7 @@ jobs:
       GH_AW_WORKFLOW_SOURCE_URL: "${{ github.server_url }}/${{ github.repository }}/blob/${{ github.ref_name }}/.github/workflows/coverage-agent.md"
     outputs:
       activation_comment_links: ${{ steps.process_safe_outputs.outputs.activation_comment_links }}
+      app_token_minting_failed: ${{ steps.safe-outputs-app-token.outcome == 'failure' }}
       code_push_failure_count: ${{ steps.process_safe_outputs.outputs.code_push_failure_count }}
       code_push_failure_errors: ${{ steps.process_safe_outputs.outputs.code_push_failure_errors }}
       create_discussion_error_count: ${{ steps.process_safe_outputs.outputs.create_discussion_error_count }}
@@ -2454,18 +2474,31 @@ jobs:
         with:
           name: agent
           path: /tmp/gh-aw/
+      - name: Generate GitHub App token
+        id: safe-outputs-app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.TEST_AGENT_APP_ID }}
+          private-key: ${{ secrets.TEST_AGENT_APP_PRIVATE_KEY }}
+          skip-token-revoke: false
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          github-api-url: ${{ github.api_url }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
       - name: Checkout repository (gh-aw default)
         if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'create_pull_request')
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: true
-          token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.safe-outputs-app-token.outputs.token }}
       - name: Configure Git credentials
         if: (!cancelled()) && needs.agent.result != 'skipped' && contains(needs.agent.outputs.output_types, 'create_pull_request')
         env:
           GH_AW_GIT_REPOSITORY: ${{ github.repository }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
-          GIT_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          GIT_TOKEN: ${{ steps.safe-outputs-app-token.outputs.token }}
         run: bash "${RUNNER_TEMP}/gh-aw/actions/configure_git_credentials.sh"
       - name: Configure GH_HOST for enterprise compatibility
         id: ghes-host-config
@@ -2489,9 +2522,10 @@ jobs:
           GITHUB_API_URL: ${{ github.api_url }}
           GH_AW_SAFE_OUTPUTS_HANDLER_CONFIG: "{\"create_pull_request\":{\"allowed_files\":[\"backend/tests/**\",\"frontend/src/**/*.test.ts\",\"frontend/src/**/*.test.tsx\"],\"draft\":true,\"max\":1,\"max_patch_files\":100,\"max_patch_size\":4096,\"protect_top_level_dot_folders\":true,\"protected_files\":[\"package.json\",\"bun.lockb\",\"bunfig.toml\",\"deno.json\",\"deno.jsonc\",\"deno.lock\",\"global.json\",\"NuGet.Config\",\"Directory.Packages.props\",\"mix.exs\",\"mix.lock\",\"go.mod\",\"go.sum\",\"stack.yaml\",\"stack.yaml.lock\",\"pom.xml\",\"build.gradle\",\"build.gradle.kts\",\"settings.gradle\",\"settings.gradle.kts\",\"gradle.properties\",\"package-lock.json\",\"yarn.lock\",\"pnpm-lock.yaml\",\"npm-shrinkwrap.json\",\"requirements.txt\",\"Pipfile\",\"Pipfile.lock\",\"pyproject.toml\",\"setup.py\",\"setup.cfg\",\"Gemfile\",\"Gemfile.lock\",\"uv.lock\",\"CODEOWNERS\",\"DESIGN.md\",\"README.md\",\"CONTRIBUTING.md\",\"SECURITY.md\",\"CODE_OF_CONDUCT.md\",\"CLAUDE.md\",\"AGENTS.md\"],\"protected_files_policy\":\"request-review\",\"title_prefix\":\"[unit-test-agent] \"},\"create_report_incomplete_issue\":{},\"noop\":{\"max\":2,\"report-as-issue\":\"false\"},\"report_incomplete\":{},\"report_missing_data\":{},\"report_missing_tool\":{}}"
           GH_AW_CI_TRIGGER_TOKEN: ${{ secrets.GH_AW_CI_TRIGGER_TOKEN }}
-          GH_AW_GITHUB_TOKEN_SOURCE: ${{ secrets.GH_AW_GITHUB_TOKEN != '' && 'pat' || 'github_actions' }}
+          GITHUB_TOKEN: ${{ steps.safe-outputs-app-token.outputs.token }}
+          GH_AW_GITHUB_TOKEN_SOURCE: "app"
         with:
-          github-token: ${{ secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.safe-outputs-app-token.outputs.token }}
           script: |
             const path = require('path');
             const actionsDir = path.join(process.env.RUNNER_TEMP, 'gh-aw', 'actions');

@@ -73,6 +73,10 @@ network:
     - defaults
 
 safe-outputs:
+  # Publish as a GitHub App instead of GITHUB_TOKEN, so CI runs on the agent's commits without manual approval.
+  github-app:
+    app-id: ${{ vars.TEST_AGENT_APP_ID }}
+    private-key: ${{ secrets.TEST_AGENT_APP_PRIVATE_KEY }}
   threat-detection:
     continue-on-error: false
     post-steps:
