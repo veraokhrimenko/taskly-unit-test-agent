@@ -12,7 +12,7 @@ When a pull request that changes code is opened, the agent decides file by file 
 | --- | --- |
 | **gh-aw with Claude** | gh-aw separates a sandboxed agent from the job that publishes, and adds a firewall and threat detection. Claude Code supports skills natively. `claude-sonnet-5-5` and gh-aw v1.2.2 are pinned. |
 | **The agent only does the thinking** | The model is the expensive, non-deterministic part, and the one an attacker would target. Workflow steps and scripts do everything with one right answer: fetch the diff, measure tests and coverage before, map files to their tests, run the checks, push and comment. The agent decides what to test and writes the tests and the report. |
-| **Checked before it is published** | A gate applies the agent's patch to a clean checkout. Only test files may change. No test may be deleted, renamed, skipped or lose assertions. Tests, coverage thresholds, typecheck and Prettier must pass. It also reports how each new test behaves on the code from before the PR. The agent runs the same rules, from the same module, before it commits, so it can still fix what they find. CI tests the gate itself, including one run in its containers. |
+| **Checked before it is published** | A gate applies the agent's patch to a clean checkout. Only test files may change, and no test may be deleted, renamed, skipped or lose assertions. Tests, coverage thresholds, typecheck and Prettier must pass. The agent runs the same rules itself before it commits, and CI tests the gate. |
 | **Tests for intended behaviour** | The agent is told to test what the change is meant to do, not what the code happens to do. It changes an existing test only when the PR text states the new behaviour, and it reports suspected bugs. Only the prompt enforces this; the gate cannot check it. |
 | **Runs once, then on request** | The agent runs when a PR is opened or leaves draft, and again only when someone adds the label `unit-tests`. It does not push to the author's branch on every push. |
 | **Plain CI next to the agent** | CI runs without AI on every PR, and its three jobs are required checks on `main`. The agent only adds tests. |
@@ -20,11 +20,11 @@ When a pull request that changes code is opened, the agent decides file by file 
 
 **Security**
 
-- The agent works in a sandbox behind a firewall, without the Anthropic key and without GitHub access. A separate job publishes with the App's token, and only after the gate and threat detection (a second AI check for prompt injection, leaked secrets and malicious code) pass.
-- The agent workflow runs the baseline and the gate's tests in containers without network. `.git` and the agent's own folders (`.github`, `.agents`, `.claude`) are read-only there, and each container has one output folder of its own. After the baseline, instruction files such as `CLAUDE.md` that are not part of the repository are removed, and a PR that adds or changes one stops before the agent runs. Dependency installation and backend client generation use network access; the containers hold no secrets. Standard CI runs separately on GitHub-hosted runners, in jobs without secrets.
-- The agent's prompt, skills and scripts, and the gate's scripts, come from the base branch. The workflow file itself comes from the PR, as for every GitHub workflow, so a PR author can still change it: people with write access are trusted. A ruleset on `main` requires a pull request, passing CI and the owner's review for `.github/` and `.agents/`. The owner can bypass it, because there is no second reviewer. Fork PRs are not processed. Actions and containers are pinned.
+- The agent works in a sandbox behind a firewall, without the Anthropic key and without GitHub access. A separate job publishes with the App's token, and only after the gate and threat detection pass.
+- Code from the PR and tests from the agent run in containers without network, where `.git` and the agent's own folders are read-only. Instruction files such as `CLAUDE.md` that are not part of the repository are removed before the agent starts.
+- The agent's prompt, skills and scripts, and the gate, come from the base branch. The workflow file comes from the PR, as for every GitHub workflow, so people with write access are trusted; a ruleset on `main` requires the owner's review for `.github/` and `.agents/`. Fork PRs are not supported.
 
-**Cost.** A PR run costs about $0.20–0.45 and takes 7 to 9 minutes. There is no run for drafts, for pushes, or for PRs that change nothing under `backend/` or `frontend/`. The model is `claude-sonnet-5-5`, with limits on turns and time and a spend limit on the key.
+**Cost.** A PR run costs about $0.20–0.45 and takes 7 to 9 minutes; drafts, pushes and PRs without changes under `backend/` or `frontend/` start no run.
 
 ## 2. How to run the PR workflow and prerequisites
 
@@ -62,7 +62,15 @@ flowchart TD
     S -- new commit --> CI["CI: typecheck, tests, Prettier"]
 ```
 
-The workflow imports the agent and lists its skills; the agent loads each skill with the Skill tool when its step starts. The coverage workflow starts with `find-coverage-gaps` instead of `analyze-pr-changes`. Each workflow `.md` is compiled into the `.lock.yml` that GitHub runs (`gh aw compile`); both are committed. The skills use the open [Agent Skills](https://agentskills.io/specification) format.
+The workflow imports the agent and lists its skills. The agent loads each skill with the Skill tool when its step starts:
+
+| Skill | When | What it does |
+| --- | --- | --- |
+| `analyze-pr-changes` | Start of a PR run | Sorts the changed files with a script and decides, file by file, whether behaviour changed and tests are needed |
+| `find-coverage-gaps` | Start of a coverage run | Ranks the files with untested code with a script and chooses which to cover |
+| `write-backend-tests`, `write-frontend-tests` | Before creating or editing a test | The project's test conventions and patterns for each package |
+| `run-and-verify-tests` | After writing tests | Runs the suite, coverage, typecheck, Prettier, the gate's patch rules and the old-code check with one script; says when to commit |
+| `report-results` | End of every run | The format of the report, with tables copied from the script |
 
 ## 4. Example run: decisions, skills used and test results
 
@@ -74,16 +82,7 @@ Demo PR [#50] adds a feature without tests: task titles must be unique, the API 
 - **Do the new tests detect the change?** Of 17 new tests, 12 run and fail on the code from before the PR, and 5 also pass. The agent saw this before it committed, and its report says why it kept those: they guard behaviour that must stay the same. Its own table counts 7 failing tests, not 12, because the agent-side check counts a parameterised test once and the gate counts each of its rows. The gate's numbers are the measured ones.
 - **After the agent**: the App pushed one commit, CI passed on it, and the agent did not start again. 9 minutes and about $0.40 in total.
 
-Other runs, each built to test one risk:
-
-| Risk | PR | What the agent did |
-| --- | --- | --- |
-| A bug in the change | [#51] | Reported the bug and wrote no test that accepts it |
-| A refactor without behaviour change | [#52] | Decided that no tests are needed, with a reason |
-| A prompt injection in a code comment | [#53] | Wrote the tests, did not act on the comment, and reported it |
-| A behaviour change the PR does not state | [#54] | Left the existing test unchanged and reported a possible breaking change |
-| Removed code that still has tests | [#55] | Named the obsolete tests for the author |
-| Existing code without tests (coverage run) | [#56] | Opened a draft PR with tests for three files |
+Other runs, each built to test one risk: a bug in the change, which the agent reported instead of testing ([#51]); a refactor, which got no tests ([#52]); a prompt injection in a code comment, which it ignored and reported ([#53]); a behaviour change the PR does not state, where it left the old test unchanged ([#54]); removed code, where it named the obsolete tests ([#55]); and a coverage run ([#56]).
 
 Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%.
 
@@ -95,22 +94,16 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 
 ## 6. Limitations
 
-- The gate notices removed tests and removed assertions, but not an assertion rewritten to check less.
-- A test runs in the same process that writes the report the gate reads, so a malicious test could forge the counts. The containers limit what such a test can reach, not what it reports.
-- When a PR removes code, the agent names the obsolete tests and the author removes them. The agent's new tests are not pushed while the suite is red.
-- A PR uses the workflow as it was when its branch was last updated with `main`.
-- The tests cover the scripts, not the way gh-aw calls them (its job order, patch format and folders). A full run on a test PR after each change has been the check for that.
-- Each scenario was run a few times, not enough to measure variance. The injection test is one obvious comment, not a determined attack.
-- The scripts map a source file to its test by file name and know Taskly's folders.
-- Fork PRs are not supported. Not tested: a real attack on threat detection, very large diffs.
+- The gate notices removed tests and removed assertions, but not an assertion rewritten to check less. A malicious test could also forge the counts that the gate reads.
+- When a PR removes code, the agent names the obsolete tests and the author removes them; its new tests are not pushed while the suite is red.
+- The tests cover the scripts, not the way gh-aw calls them. A full run on a test PR after each change has been the check for that.
+- Each scenario was run a few times, not enough to measure variance, and the injection test is one obvious comment.
 
 ## 7. What I would extend or change for production
 
 - An evaluation suite built from the test PRs and run many times, to measure variance and catch regressions when prompts change.
-- A canary: one fixed test PR that runs the whole pipeline automatically after each change to `.github/` or `.agents/` and after each gh-aw upgrade.
+- A canary: one fixed test PR that runs the whole pipeline after each change to `.github/` or `.agents/` and after each gh-aw upgrade.
 - Mutation testing, to measure test strength instead of coverage.
-- Keyless authentication over OIDC instead of a stored API key.
-- Let the agent delete an obsolete test when code can prove that it only covers removed code.
 
 [#51]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/51
 [#52]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/52
