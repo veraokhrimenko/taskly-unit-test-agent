@@ -81,3 +81,29 @@ it('propagates database errors', async () => {
   vi.spyOn(database.todo, 'findMany').mockRejectedValue(new Error('Database unavailable'));
   await expect(repository.list()).rejects.toThrow('Database unavailable');
 });
+
+it('finds an existing title ignoring case and surrounding spaces', async () => {
+  const { database, repository } = setup();
+  const findFirst = vi.spyOn(database.todo, 'findFirst').mockResolvedValue({ id: 1 } as never);
+  expect(await repository.titleExists('  Plan the sprint ')).toBe(true);
+  expect(findFirst).toHaveBeenCalledWith({
+    where: { title: { equals: 'Plan the sprint', mode: 'insensitive' } },
+    select: { id: true },
+  });
+});
+
+it('reports a free title and excludes the given task id', async () => {
+  const { database, repository } = setup();
+  const findFirst = vi.spyOn(database.todo, 'findFirst').mockResolvedValue(null);
+  expect(await repository.titleExists('Free', 7)).toBe(false);
+  expect(findFirst).toHaveBeenCalledWith({
+    where: { title: { equals: 'Free', mode: 'insensitive' }, NOT: { id: 7 } },
+    select: { id: true },
+  });
+});
+
+it('propagates errors from the title lookup', async () => {
+  const { database, repository } = setup();
+  vi.spyOn(database.todo, 'findFirst').mockRejectedValue(new Error('Database unavailable'));
+  await expect(repository.titleExists('Task')).rejects.toThrow('Database unavailable');
+});

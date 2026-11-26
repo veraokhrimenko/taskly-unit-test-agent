@@ -5,7 +5,7 @@ import { createTodosRouter } from '../src/features/todos/router.ts';
 import { todo } from './fixture.ts';
 
 function setup() {
-  const repository = { list: vi.fn().mockResolvedValue([todo]), create: vi.fn().mockResolvedValue(todo), get: vi.fn(), update: vi.fn(), delete: vi.fn() };
+  const repository = { list: vi.fn().mockResolvedValue([todo]), create: vi.fn().mockResolvedValue(todo), get: vi.fn(), update: vi.fn(), delete: vi.fn(), titleExists: vi.fn().mockResolvedValue(false) };
   const app = express();
   app.use(express.json());
   app.use('/api/todos', createTodosRouter(repository));
@@ -91,3 +91,49 @@ it.each([{ title: '  ' }, { title: 'x'.repeat(121) }, { title: 'Task', priority:
     expect(repository.create).not.toHaveBeenCalled();
   },
 );
+it('returns 409 and does not create a task when the title already exists', async () => {
+  const { app, repository } = setup();
+  repository.titleExists.mockResolvedValue(true);
+  const response = await request(app).post('/api/todos').send({ title: '  plan the sprint ' });
+  expect(response.status).toBe(409);
+  expect(response.body).toEqual({ detail: 'A task with this title already exists.' });
+  expect(repository.titleExists).toHaveBeenCalledWith('plan the sprint');
+  expect(repository.create).not.toHaveBeenCalled();
+});
+it('does not check titles when create input is invalid', async () => {
+  const { app, repository } = setup();
+  expect((await request(app).post('/api/todos').send({ title: ' ' })).status).toBe(422);
+  expect(repository.titleExists).not.toHaveBeenCalled();
+});
+it('returns 409 and does not update when renaming to another task title', async () => {
+  const { app, repository } = setup();
+  repository.titleExists.mockResolvedValue(true);
+  const response = await request(app).patch('/api/todos/4').send({ title: 'Taken' });
+  expect(response.status).toBe(409);
+  expect(response.body).toEqual({ detail: 'A task with this title already exists.' });
+  expect(repository.titleExists).toHaveBeenCalledWith('Taken', 4);
+  expect(repository.update).not.toHaveBeenCalled();
+});
+it('allows renaming when the title is free, excluding the task itself', async () => {
+  const { app, repository } = setup();
+  const updated = { ...todo, title: 'Free' };
+  repository.update.mockResolvedValue(updated);
+  const response = await request(app).patch('/api/todos/4').send({ title: 'Free' });
+  expect(response.status).toBe(200);
+  expect(response.body).toEqual(updated);
+  expect(repository.titleExists).toHaveBeenCalledWith('Free', 4);
+  expect(repository.update).toHaveBeenCalledWith(4, { title: 'Free' });
+});
+it('skips the title check when the update does not change the title', async () => {
+  const { app, repository } = setup();
+  repository.update.mockResolvedValue(todo);
+  expect((await request(app).patch('/api/todos/1').send({ description: 'Only text' })).status).toBe(200);
+  expect(repository.titleExists).not.toHaveBeenCalled();
+});
+it('returns 500 when the title check fails', async () => {
+  const { app, repository } = setup();
+  repository.titleExists.mockRejectedValue(new Error('down'));
+  const response = await request(app).post('/api/todos').send({ title: 'Task' });
+  expect(response.status).toBe(500);
+  expect(repository.create).not.toHaveBeenCalled();
+});
