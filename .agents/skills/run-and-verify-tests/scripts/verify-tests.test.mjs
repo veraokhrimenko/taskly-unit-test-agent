@@ -34,7 +34,7 @@ function setup() {
   const input = mkdtempSync(join(tmpdir(), 'verify-input-'));
   mkdirSync(join(repo, 'backend/tests'), { recursive: true });
   mkdirSync(join(repo, 'backend/src'));
-  writeFileSync(join(repo, 'backend/tests/router.test.ts'), "it('rejects duplicates', () => { expect(1).toBe(1); });\n");
+  writeFileSync(join(repo, 'backend/tests/router.test.ts'), "it('existing test', () => { expect(1).toBe(1); });\n");
   writeFileSync(join(repo, 'backend/src/router.ts'), 'new\n');
   // Fake "npm test": the test passes on the new source file and fails on the old one.
   writeFileSync(join(repo, 'backend/fake-test.mjs'), `
@@ -57,6 +57,11 @@ writeFileSync(out, JSON.stringify({ testResults: [{ name: process.cwd() + '/test
     total: { lines: { pct: 50 }, branches: { pct: 40 } },
     '/runner/repo/backend/src/router.ts': { lines: { pct: 80 }, branches: { pct: 50 } },
   }));
+  // The script compares the working tree with a commit, so the fake package is a repository.
+  writeFileSync(join(repo, '.gitignore'), 'coverage/\n');
+  for (const args of [['init', '-q'], ['add', '-A'], ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', 'start']]) {
+    spawnSync('git', args, { cwd: repo });
+  }
   return { repo, input };
 }
 
@@ -128,6 +133,8 @@ test('runs the new tests on the old source files and puts the current files back
   let source;
   const { stdout, status } = verify(['backend', '--input', '$INPUT', 'backend/tests/router.test.ts'], {}, (repo, input) => {
     source = join(repo, 'backend/src/router.ts');
+    // The agent adds one test to the existing file.
+    writeFileSync(join(repo, 'backend/tests/router.test.ts'), "it('existing test', () => { expect(1).toBe(1); });\nit('rejects duplicates', () => { expect(2).toBe(2); });\n");
     mkdirSync(join(input, 'old-src/files/backend/src'), { recursive: true });
     writeFileSync(join(input, 'old-src/files/backend/src/router.ts'), 'old\n');
     writeFileSync(join(input, 'old-src/changed.txt'), 'backend/src/router.ts\n');

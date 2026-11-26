@@ -87,6 +87,8 @@ safe-outputs:
           for file in verify-agent-patch.sh gate-report.mjs; do
             git show "$BASE_SHA:.github/scripts/$file" > "$RUNNER_TEMP/gate/$file"
           done
+          # The patch rules live in the skill, so the agent and the gate use one implementation.
+          git show "$BASE_SHA:.agents/skills/run-and-verify-tests/scripts/patch-rules.mjs" > "$RUNNER_TEMP/gate/patch-rules.mjs"
           bash "$RUNNER_TEMP/gate/verify-agent-patch.sh" apply /tmp/gh-aw/aw-*.patch
 
       - name: Verify backend tests

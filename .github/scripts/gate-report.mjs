@@ -4,12 +4,17 @@
 //
 //   gate-report.mjs counts <results.json>                    "<passed> <failed> <total>"
 //   gate-report.mjs removed <before.json> <after.json>       tests that existed before and are gone
-//   gate-report.mjs static-removed <after.json> <file>...    the same, from test titles in source files
+//   gate-report.mjs static-removed <after.json> --rules <patch-rules.mjs> <file>...
+//                                                            the same, from test titles in source files
 //   gate-report.mjs old-code <results.json> <before.json> <after.json>
 //                                                            how each new test behaves on the old code
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const [command, ...args] = process.argv.slice(2);
+
+// Exit code of "removed" and "static-removed" when tests are gone. Any other non-zero code
+// means that the check itself failed, which the gate treats as a failure, not as "nothing found".
+const FOUND = 3;
 
 // Test titles are written by the agent. Keep only harmless characters, so a title cannot add
 // Markdown or HTML to the comment that reports the gate's results.
@@ -33,33 +38,37 @@ if (command === 'counts') {
   const after = listed(args[1]);
   const gone = [...listed(args[0])].filter((name) => !after.has(name));
   for (const name of gone) console.log(name.replace(/^\/work\//, ''));
-  process.exit(gone.length ? 1 : 0);
+  process.exit(gone.length ? FOUND : 0);
 } else if (command === 'static-removed') {
   // Fallback when the old version of a test file cannot be collected: read the titles from
-  // its source. Titles with placeholders (it.each) cannot be matched and are skipped.
+  // its source, with the same function that the patch rules use.
+  //   static-removed <after.json> --rules <patch-rules.mjs> [--before-out <file>] <old file>...
+  // With --before-out, also write the tests that existed before, so that later steps do not
+  // count every test of the file as new.
+  const options = { rules: null, beforeOut: null };
+  const files = [];
+  for (let index = 1; index < args.length; index += 1) {
+    if (args[index] === '--rules') options.rules = args[++index];
+    else if (args[index] === '--before-out') options.beforeOut = args[++index];
+    else files.push(args[index]);
+  }
+  const { titles } = await import(options.rules);
   const after = [...listed(args[0])];
   const gone = [];
-  // With --before-out <file>, also write the tests that existed before, so that later steps
-  // do not count every test of the file as new.
-  const beforeOut = args[1] === '--before-out' ? args[2] : null;
-  const files = beforeOut ? args.slice(3) : args.slice(1);
   const existed = new Set();
   for (const file of files) {
-    const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(/\b(?:it|test)(?:\.each\([^)]*\))?\(\s*(['"`])((?:\\.|(?!\1).)*)\1/g)) {
-      const title = match[2];
-      if (/%|\$\{|\$[a-zA-Z]/.test(title)) continue;
-      const match = after.filter((name) => name.endsWith(title));
-      if (!match.length) gone.push(title);
-      for (const name of match) existed.add(name);
+    for (const title of titles(readFileSync(file, 'utf8'))) {
+      const found = after.filter((name) => name.endsWith(title));
+      if (!found.length) gone.push(title);
+      for (const name of found) existed.add(name);
     }
   }
-  if (beforeOut) {
+  if (options.beforeOut) {
     const tests = (json(args[0]) ?? []).filter((test) => existed.has(`${test.file} > ${test.name}`));
-    writeFileSync(beforeOut, JSON.stringify(tests));
+    writeFileSync(options.beforeOut, JSON.stringify(tests));
   }
   for (const title of gone) console.log(title);
-  process.exit(gone.length ? 1 : 0);
+  process.exit(gone.length ? FOUND : 0);
 } else if (command === 'old-code') {
   const report = json(args[0]);
   const before = args[1] && existsSync(args[1]) ? listed(args[1]) : new Set();

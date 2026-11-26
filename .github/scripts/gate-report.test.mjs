@@ -1,7 +1,7 @@
 // Tests for gate-report.mjs. Run: node --test .github/scripts/*.test.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -59,4 +59,39 @@ test('prints titles of passing tests without Markdown or HTML', () => {
   const line = stdout.split('\n').find((text) => text.startsWith('- ok'));
   assert.ok(line);
   assert.doesNotMatch(line, /[`#<>@\[\]]/);
+});
+
+const rules = new URL('../../.agents/skills/run-and-verify-tests/scripts/patch-rules.mjs', import.meta.url).pathname;
+
+// Runs "removed" or "static-removed" in a folder with the given files.
+function kept(command, files, args) {
+  const dir = mkdtempSync(join(tmpdir(), 'gate-kept-'));
+  for (const [name, content] of Object.entries(files)) writeFileSync(join(dir, name), content);
+  return { dir, ...spawnSync(process.execPath, [script, command, ...args.map((arg) => arg.replace('$DIR', dir))], { encoding: 'utf8' }) };
+}
+
+test('removed: exits with 3 and names a test that is gone, 0 when all are kept', () => {
+  const before = JSON.stringify([{ name: 'one', file }, { name: 'two', file }]);
+  const gone = kept('removed', { 'before.json': before, 'after.json': JSON.stringify([{ name: 'one', file }]) }, ['$DIR/before.json', '$DIR/after.json']);
+  assert.equal(gone.status, 3);
+  assert.match(gone.stdout, /health\.test\.ts > two/);
+  assert.equal(kept('removed', { 'before.json': before, 'after.json': before }, ['$DIR/before.json', '$DIR/after.json']).status, 0);
+});
+
+test('static-removed: finds a removed title, records the tests that existed, and fails loudly on an error', () => {
+  const files = {
+    'after.json': JSON.stringify([{ name: 'kept', file }, { name: 'brand new', file }]),
+    'old.test.ts': "it('kept', () => {});\nit('gone', () => {});\n",
+  };
+  const result = kept('static-removed', files, ['$DIR/after.json', '--rules', rules, '--before-out', '$DIR/before.json', '$DIR/old.test.ts']);
+  assert.equal(result.status, 3, result.stderr);
+  assert.equal(result.stdout.trim(), 'gone');
+  assert.deepEqual(JSON.parse(readFileSync(join(result.dir, 'before.json'), 'utf8')), [{ name: 'kept', file }]);
+
+  const allKept = kept('static-removed', { ...files, 'old.test.ts': "it('kept', () => {});\n" }, ['$DIR/after.json', '--rules', rules, '$DIR/old.test.ts']);
+  assert.equal(allKept.status, 0, allKept.stderr);
+
+  const broken = kept('static-removed', files, ['$DIR/after.json', '--rules', '/no/such/module.mjs', '$DIR/old.test.ts']);
+  assert.notEqual(broken.status, 0);
+  assert.notEqual(broken.status, 3);
 });
