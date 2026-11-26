@@ -42,7 +42,7 @@ When a pull request that changes code is opened, the agent decides file by file 
 
 **Security**
 
-- Code from the PR, and tests written by the agent, never run on the runner itself. The agent works in a sandbox behind a firewall, where it can edit its checkout and run a short list of commands, and it has no write access to GitHub. The baseline and the gate run in containers that see only the checkout and have no network once dependencies are installed.
+- Code from the PR, and tests written by the agent, never run on the runner itself. The agent works in a sandbox behind a firewall, where it can edit its checkout and run a short list of commands, and it has no write access to GitHub. The baseline and the gate run in containers that see only the checkout and have no network once dependencies are installed. In them `.git` is read-only, so a test cannot plant a Git setting that would run on the runner later, and they can write results only to a folder of their own, not to the gate's summary.
 - A separate job publishes, and only after the gate and threat detection (a second AI check for prompt injection, leaked secrets and malicious code) pass.
 - The agent's prompt, skills and scripts come from the base branch. The workflow file itself comes from the PR, as for every GitHub workflow, so people with write access are trusted, and CODEOWNERS covers `.github/` and `.agents/`. Fork PRs are not processed.
 - The Anthropic key is hidden from the agent, and the agent has no GitHub access: gh-aw's default GitHub server is turned off, because the agent never used it and it could read comments that anyone can write. Actions and containers are pinned.

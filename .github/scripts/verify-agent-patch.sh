@@ -18,14 +18,18 @@
 #                                                 report how the new tests behave on the code
 #                                                 from before the pull request
 #
-# Results go to the step summary and to $GATE_OUT (default $RUNNER_TEMP/gate-out).
+# Results go to the step summary and to $GATE_OUT (default $RUNNER_TEMP/gate-out). Containers
+# can write only to its "box" subfolder.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
 output="${GITHUB_OUTPUT:-/dev/null}"
 out="${GATE_OUT:-${RUNNER_TEMP:-/tmp}/gate-out}"
-mkdir -p "$out"
+# The only folder a container can write results to. The summary and the other files that the
+# gate itself writes stay in $out, where code under test cannot reach them.
+box_out="$out/box"
+mkdir -p "$box_out"
 
 # Test files the agent may add or change. Fixtures and helpers are not included.
 test_files='^backend/tests/.+\.test\.ts$|^frontend/src/.+\.test\.tsx?$'
@@ -42,12 +46,15 @@ image_for() {
 }
 
 # box <bridge|none> <package> <command...>: run a command in the package folder, in a container.
+# .git is read-only: code in the container must not be able to change the Git configuration or
+# hooks, because Git commands run on the runner afterwards (core.fsmonitor would run there).
 box() {
   local network="$1" pkg="$2"
   shift 2
   docker run --rm --network "$network" --user "$(id -u):$(id -g)" \
     -e HOME=/tmp/home -e CI=true \
-    -v "$PWD:/work" -v "$out:/out" -v "$here:/gate:ro" -w "/work/$pkg" \
+    -v "$PWD:/work" -v "$PWD/.git:/work/.git:ro" -v "$box_out:/out" -v "$here:/gate:ro" \
+    -w "/work/$pkg" \
     "$(image_for "$pkg")" "$@"
 }
 
@@ -156,8 +163,8 @@ check_tests_kept() {
   local changed modified
   changed=$(git diff --name-only --no-renames --diff-filter=AM "$base"..HEAD -- "$pkg" | sed "s#^$pkg/##")
   modified=$(git diff --name-only --no-renames --diff-filter=M "$base"..HEAD -- "$pkg" | sed "s#^$pkg/##")
-  echo '[]' > "$out/$pkg-names-before.json"
-  echo '[]' > "$out/$pkg-names-after.json"
+  echo '[]' > "$box_out/$pkg-names-before.json"
+  echo '[]' > "$box_out/$pkg-names-after.json"
   [ -n "$changed" ] || return 0
 
   # shellcheck disable=SC2086
@@ -173,11 +180,11 @@ check_tests_kept() {
     removed=$(box none "$pkg" node /gate/gate-report.mjs removed "/out/$pkg-names-before.json" "/out/$pkg-names-after.json") || true
   else
     # The old version cannot be collected (for example it imports removed code): read its titles.
-    echo '[]' > "$out/$pkg-names-before.json"
-    mkdir -p "$out/old-tests"
+    echo '[]' > "$box_out/$pkg-names-before.json"
+    mkdir -p "$box_out/old-tests"
     local copies=""
     for file in $modified; do
-      cp "$pkg/$file" "$out/old-tests/$(basename "$file")"
+      cp "$pkg/$file" "$box_out/old-tests/$(basename "$file")"
       copies="$copies /out/old-tests/$(basename "$file")"
       git checkout --quiet HEAD -- "$pkg/$file"
     done
