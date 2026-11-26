@@ -43,6 +43,8 @@ On every pull request that changes code, the agent decides file by file whether 
 - The agent's instructions and skills come from the base branch, so a PR cannot change the agent that checks it.
 - The Anthropic key is hidden from the agent. Actions and containers are pinned.
 
+**Example: removing the agent's GitHub access.** gh-aw gives the agent a read-only GitHub server (MCP) by default. I checked the audit of the demo run: the agent never called it, because its input is prepared before it starts. In a public repository, that server would also let it read comments and issues that anyone can write. So I turned it off. This removes one path for prompt injection, one container from every run, and the server's 27 tools and their instructions from the agent's prompt.
+
 ## 2. How to run the PR workflow and prerequisites
 
 **Prerequisites**
@@ -116,6 +118,7 @@ Coverage of `main` before this work and now: backend lines 33% → 58%, frontend
 - Rulesets and CODEOWNERS for `main` and `.github/**`.
 - An evaluation suite built from the test PRs, to catch regressions when prompts change.
 - Mutation testing and property-based tests to measure test strength.
+- If intended behaviour is often described in linked issues, prepare the issue text as input, as the PR text is now, instead of giving the agent GitHub access.
 
 [#1]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/1
 [#2]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/2

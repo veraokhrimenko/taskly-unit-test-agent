@@ -2,6 +2,8 @@
 # Settings shared by the unit test agent workflows (imported, not a workflow itself).
 # Each workflow adds the bash command for its own analysis script.
 tools:
+  # The agent gets its input from files prepared before it starts, so it needs no GitHub access.
+  github: false
   edit:
   bash:
     - "git status"
