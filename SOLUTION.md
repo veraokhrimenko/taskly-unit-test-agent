@@ -35,8 +35,7 @@ On every pull request that changes code, the agent decides file by file whether 
 **Running**
 
 - **Pull requests**: open a PR that changes `backend/` or `frontend/`. The agent runs when the PR is opened and again on every push to the PR that changes code. Pushes to a branch without a PR do not start it. It comments in about 7 minutes.
-- **Coverage**: Actions → Coverage agent → Run workflow. Choose the package and how many files to cover (3, 5 or 8, so the PR stays reviewable).
-- **Changing the agent**: edit the `.md` files, run `gh aw compile` (gh-aw v1.2.2), and commit the `.md` and `.lock.yml` files together.
+- **Coverage** (optional, started by hand): Actions → Coverage agent → Run workflow. By default it covers both packages and up to 5 files.
 
 ## 3. Where the custom agent and skills are defined and how they are used
 
@@ -54,9 +53,12 @@ flowchart TD
     P --> G["Agent in a read-only sandbox<br/>analyze-pr-changes → write-*-tests<br/>→ run-and-verify-tests → report-results"]
     G --> D{"Threat detection<br/>and gate"}
     D -- pass --> S["The App pushes the tests<br/>and posts the report"]
-    D -- fail --> X["No push and no report"]
+    D -- fail --> X["No push and no report;<br/>gh-aw opens an issue<br/>with a link to the run"]
     S -- new commit --> CI
+    CI --> R["PR checks: red or green"]
 ```
+
+Each workflow `.md` is compiled into the `.lock.yml` that GitHub runs (`gh aw compile`, gh-aw v1.2.2); both files are committed.
 
 The coverage workflow starts with `find-coverage-gaps` and ends with a draft PR. The skills use the open [Agent Skills](https://agentskills.io/specification) format, so Copilot, Cursor, Codex and Gemini CLI read them from `.agents/skills/`. Claude Code can install them with `gh skill install`.
 
