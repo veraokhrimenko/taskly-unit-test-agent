@@ -116,6 +116,7 @@ safe-outputs:
     hide-older-comments: true
   push-to-pull-request-branch:
     allowed-files:
+      - "backend/tests/*.test.ts"
       - "backend/tests/**/*.test.ts"
       - "frontend/src/**/*.test.ts"
       - "frontend/src/**/*.test.tsx"
