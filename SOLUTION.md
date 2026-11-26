@@ -74,7 +74,7 @@ Demo PR [#31] adds a feature without tests: task titles must be unique, the API 
 - **Do the new tests detect the change?** Of 18 new tests, 9 fail on an assertion on the old code, 4 need code that the PR adds, and 5 also pass.
 - **After the agent**: the App pushed one commit, CI passed on it, and the agent did not start again. 8 minutes in total.
 
-Other runs, each built to test one risk: a bug in the change ([#2]), a refactor ([#3]), a prompt injection in a code comment ([#4]), a behaviour change the PR does not state ([#5]), removed code that still has tests ([#6]), and a coverage run ([#10]). Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%.
+Other runs, each built to test one risk: a bug in the change ([#37]), a refactor ([#38]), a prompt injection in a code comment ([#39]), a behaviour change the PR does not state ([#40]), removed code that still has tests ([#41]), and a coverage run ([#42]). Coverage of `main` before this work and now: backend lines 33% → 58%, frontend 48% → 72%.
 
 ## 5. Assumptions
 
@@ -100,12 +100,12 @@ Other runs, each built to test one risk: a bug in the change ([#2]), a refactor 
 - Keyless authentication over OIDC instead of a stored API key.
 - Let the agent delete an obsolete test when code can prove that it only covers removed code.
 
-[#2]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/2
-[#3]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/3
-[#4]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/4
-[#5]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/5
-[#6]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/6
-[#10]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/10
+[#37]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/37
+[#38]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/38
+[#39]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/39
+[#40]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/40
+[#41]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/41
+[#42]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/42
 [#31]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31
 [independent check]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31#issuecomment-7192057815
 [agent's report]: https://github.com/veraokhrimenko/taskly-unit-test-agent/pull/31#issuecomment-7192041120
