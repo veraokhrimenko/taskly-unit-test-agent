@@ -1,4 +1,8 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, expect, it, vi } from 'vitest'
@@ -74,5 +78,49 @@ it('leaves the cached list unchanged when creating fails', async () => {
   act(() => result.current.mutate(input))
 
   await waitFor(() => expect(result.current.isError).toBe(true))
+  expect(queryClient.getQueryData(todoKeys.list)).toEqual([todoFixture])
+})
+
+it('reloads the active todo list from the server when creating fails', async () => {
+  const serverTodo = {
+    ...todoFixture,
+    id: 7,
+    title: 'Created before the failure',
+  }
+  vi.mocked(todosApi.create).mockRejectedValue(new Error('network down'))
+  const { queryClient, result } = setup()
+  const queryFn = vi
+    .fn()
+    .mockResolvedValueOnce([todoFixture])
+    .mockResolvedValue([serverTodo, todoFixture])
+  const observer = new QueryObserver(queryClient, {
+    queryKey: todoKeys.list,
+    queryFn,
+  })
+  const unsubscribe = observer.subscribe(() => {})
+  await waitFor(() =>
+    expect(queryClient.getQueryData(todoKeys.list)).toEqual([todoFixture]),
+  )
+
+  act(() => result.current.mutate(input))
+
+  await waitFor(() =>
+    expect(queryClient.getQueryData(todoKeys.list)).toEqual([
+      serverTodo,
+      todoFixture,
+    ]),
+  )
+  expect(result.current.isError).toBe(true)
+  unsubscribe()
+})
+
+it('does not reload the todo list when creating succeeds', async () => {
+  vi.mocked(todosApi.create).mockResolvedValue(todoFixture)
+  const { queryClient, result } = setup()
+  const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
+
+  await act(() => result.current.mutateAsync(input))
+
+  expect(invalidate).not.toHaveBeenCalled()
   expect(queryClient.getQueryData(todoKeys.list)).toEqual([todoFixture])
 })
